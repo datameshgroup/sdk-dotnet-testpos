@@ -75,7 +75,7 @@
 
         <Style TargetType="Button">
             <Setter Property="Height" Value="40" />
-            <Setter Property="Width" Value="128" />
+            <Setter Property="Width" Value="144" />
             <Setter Property="FontSize" Value="18" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Margin" Value="4,0,0,0" />
@@ -282,6 +282,7 @@
                 </ScrollViewer>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,8,0" >
                     <Button x:Name="BtnReconciliation" Content="Settle" Click="BtnReconciliation_Click" Height="40" VerticalAlignment="Top"/>
+                    <Button x:Name="BtnLastTxnStatus" Content="Last Txn Status" Click="BtnLastTxnStatus_Click" Height="40" VerticalAlignment="Top"/>
                     <Button x:Name="BtnPayment" Content="Payment" Click="BtnPayment_Click" Height="40" VerticalAlignment="Top"/>
                 </StackPanel>
             </Grid>

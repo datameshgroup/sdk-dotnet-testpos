@@ -4,6 +4,10 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net5.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <Version>1.0.1</Version>
+    <Authors>Clinton Dean</Authors>
+    <Company>DataMesh Group</Company>
+    <Product>SimplePOS</Product>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DataMeshGroup.Fusion.FusionClient" Version="1.0.4" />
+    <PackageReference Include="DataMeshGroup.Fusion.FusionClient" Version="1.0.6" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 

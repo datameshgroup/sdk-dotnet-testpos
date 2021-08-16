@@ -1,24 +1,15 @@
-﻿using System;
+﻿using DataMeshGroup.Fusion;
+using DataMeshGroup.Fusion.Model;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.ComponentModel;
+using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.IO;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using DataMeshGroup.Fusion;
-using DataMeshGroup.Fusion.Model;
-using System.Threading;
-using Newtonsoft.Json;
 
 namespace SimplePOS
 {
@@ -143,10 +134,10 @@ namespace SimplePOS
             return (!File.Exists("appstate.json")) ? new AppState() : JsonConvert.DeserializeObject<AppState>(File.ReadAllText("appstate.json"));
         }
 
-        private void UpdateAppState(bool paymentInProgress, MessageHeader messageHeader)
+        private void UpdateAppState(bool paymentInProgress, MessageHeader messageHeader = null)
         {
             appState.PaymentInProgress = paymentInProgress;
-            appState.MessageHeader = messageHeader;
+            appState.MessageHeader = messageHeader ?? appState.MessageHeader;
 
             File.WriteAllText("appstate.json", JsonConvert.SerializeObject(appState));
         }
@@ -221,19 +212,12 @@ namespace SimplePOS
             var paymentRequest = new PaymentRequest(
                 transactionID: Guid.NewGuid().ToString("N"),
                 requestedAmount: purchaseAmount,
-                saleItems: new List<SaleItem>()
-                {
-                    new SaleItem()
-                    {
-                        ItemID = "0",
-                        ProductCode = "0",
-                        ProductLabel = "Product",
-                        UnitPrice = purchaseAmount,
-                        ItemAmount = purchaseAmount
-                    }
-                },
+                saleItems: new List<SaleItem>(),
                 paymentType: paymentType
                 );
+            // Create sale items
+            _ = paymentRequest.AddSaleItem(productCode: "XXXYYYZZZ0123", productLabel: "Product", itemAmount: purchaseAmount);
+
             // Add extra fields
             paymentRequest.PaymentTransaction.AmountsReq.CashBackAmount = cashoutAmount;
             paymentRequest.SaleData.TokenRequestedType = requestCardToken ? TokenRequestedType.Customer : null;
@@ -285,7 +269,7 @@ namespace SimplePOS
                                 ShowPaymentDialogFailed(paymentTypeName, null, r.Response?.AdditionalResponse);
                             }
 
-                            UpdateAppState(false, null);
+                            UpdateAppState(false);
                             waitingForResponse = false;
                             break;
 
@@ -346,6 +330,70 @@ namespace SimplePOS
             }
         }
 
+        private async void BtnLastTxnStatus_Click(object sender, RoutedEventArgs e)
+        {
+            string caption = "LAST TRANSACTION STATUS";
+            string title = "NO LAST TRANSACTION";
+
+            // Exit if we don't have anything to recover
+            if (appState is null || appState.MessageHeader is null)
+            {
+                ShowPaymentDialog(caption, title, null, null, LightBoxDialogType.Normal, true, false);
+                return;
+            }
+
+            var transactionStatusRequest = new TransactionStatusRequest()
+            {
+                MessageReference = new MessageReference()
+                {
+                    MessageCategory = appState.MessageHeader.MessageCategory,
+                    POIID = appState.MessageHeader.POIID,
+                    SaleID = appState.MessageHeader.SaleID,
+                    ServiceID = appState.MessageHeader.ServiceID
+                }
+            };
+
+            try
+            {
+                var r = await fusionClient.SendRecvAsync<TransactionStatusResponse>(transactionStatusRequest);
+
+                // If the response to our TransactionStatus request is "Success", we have a PaymentResponse to check
+                if (r.Response.Result == Result.Success)
+                {
+                    if (r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response.Result != Result.Failure)
+                    {
+                        ShowPaymentDialogSuccess(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse);
+                    }
+                    else
+                    {
+                        ShowPaymentDialogFailed(caption, null, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse);
+                    }
+                }
+                // else if the transaction is still in progress, and we haven't reached out timeout
+                else if (r.Response.ErrorCondition == ErrorCondition.InProgress)
+                {
+                    ShowPaymentDialog(caption, "PAYMENT IN PROGRESS", null, "", LightBoxDialogType.Normal, true, false);
+                }
+                // otherwise, fail
+                else
+                {
+                    ShowPaymentDialogFailed(caption, null, r.Response?.AdditionalResponse);
+                }
+            }
+            catch (DataMeshGroup.Fusion.NetworkException ne)
+            {
+                ShowPaymentDialog(caption, title, "WAITING FOR CONNECTION...", ne.Message, LightBoxDialogType.Normal, true, false);
+            }
+            catch (DataMeshGroup.Fusion.TimeoutException)
+            {
+                ShowPaymentDialog(caption, title, "TIMEOUT WAITING FOR HOST...", null, LightBoxDialogType.Normal, true, false);
+            }
+            catch (Exception ex)
+            {
+                ShowPaymentDialog(caption, title, "WAITING FOR CONNECTION...", ex.Message, LightBoxDialogType.Normal, true, false);
+            }
+        }
+
         private void BtnDialogOK_Click(object sender, RoutedEventArgs e)
         {
             HideLightBoxDialog();
@@ -372,7 +420,7 @@ namespace SimplePOS
                 return;
             }
 
-            UpdateAppState(false, null);
+            UpdateAppState(false);
             NavigateToMainPage();
         }
 
@@ -457,7 +505,7 @@ namespace SimplePOS
                 }
             }
 
-            UpdateAppState(false, null);
+            UpdateAppState(false);
         }
 
 
@@ -605,8 +653,7 @@ namespace SimplePOS
             //WebBrowserReceipt.Visibility = Visibility.Visible;
         }
 
+
         #endregion
-
-
     }
 }
