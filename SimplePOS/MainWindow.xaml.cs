@@ -79,8 +79,8 @@ namespace SimplePOS
         private async Task CreateFusionClient()
         {
             // Destroy if client already exists
-            if(fusionClient != null)
-            { 
+            if (fusionClient != null)
+            {
                 await fusionClient.DisconnectAsync();
                 fusionClient.OnLog -= FusionClient_OnLog;
                 fusionClient.Dispose();
@@ -212,11 +212,56 @@ namespace SimplePOS
             var paymentRequest = new PaymentRequest(
                 transactionID: Guid.NewGuid().ToString("N"),
                 requestedAmount: purchaseAmount,
-                saleItems: new List<SaleItem>(),
                 paymentType: paymentType
                 );
-            // Create sale items
-            _ = paymentRequest.AddSaleItem(productCode: "XXXYYYZZZ0123", productLabel: "Product", itemAmount: purchaseAmount);
+
+            // Create sale item
+            SaleItem parentItem = paymentRequest.AddSaleItem(
+                productCode: "XXVH776",
+                productLabel: "Big Kahuna Burger",
+                itemAmount: purchaseAmount,
+                category: "food",
+                subCategory: "mains"
+                );
+            // Sale item modifiers
+            paymentRequest.AddSaleItem(
+                    productCode: "XXVH776-0",
+                    productLabel: "Extra pineapple",
+                    parentItemID: parentItem.ItemID,
+                    itemAmount: 0,
+                    category: "food",
+                    subCategory: "mains"
+                    );
+            paymentRequest.AddSaleItem(
+                productCode: "XXVH776-1",
+                productLabel: "Side of fries",
+                parentItemID: parentItem.ItemID,
+                itemAmount: 0,
+                category: "food",
+                subCategory: "sides"
+                );
+            // Full sale item
+            //paymentRequest.AddSaleItem(
+            //    productCode: "AB54447",
+            //    productLabel: "Das Keyboard 4 Ultimate",
+            //    itemAmount: 449.95M,
+            //    quantity: 1,
+            //    unitOfMeasure: UnitOfMeasure.Other,
+            //    eanUpc: "DASK4ULTMBLU",
+            //    additionalProductInfo: "Mechanical Keyboard - Cherry MX Blue switch",
+            //    unitPrice: 299.95M,
+            //    taxCode: "GST",
+            //    costBase: 249.95m,
+            //    discount: 50.00m,
+            //    discountReason: "$50 voucher",
+            //    categories: new List<string>() { "Input Devices", "Keyboards", "Mechanical Keyboards" },
+            //    brand: "Das",
+            //    quantityInStock: 42,
+            //    pageURL: "https://mypage/keyboards/AB54447.html",
+            //    imageURLs: new List<string>() { "https://mypage/keyboards/AB54447.jpg" },
+            //    weight: 1.5m,
+            //    weightUnitOfMeasure: WeightUnitOfMeasure.Kilogram
+            //    );
 
             // Add extra fields
             paymentRequest.PaymentTransaction.AmountsReq.CashBackAmount = cashoutAmount;
@@ -266,7 +311,7 @@ namespace SimplePOS
                             }
                             else
                             {
-                                ShowPaymentDialogFailed(paymentTypeName, null, r.Response?.AdditionalResponse);
+                                ShowPaymentDialogFailed(paymentTypeName, r.Response?.ErrorCondition.ToString(), r.Response?.AdditionalResponse);
                             }
 
                             UpdateAppState(false);
@@ -274,7 +319,7 @@ namespace SimplePOS
                             break;
 
                         case LoginResponse r:
-                            // Response to auto login
+                            // Response to auto login - could log this
                             break;
 
                         case DisplayRequest r:
@@ -291,7 +336,7 @@ namespace SimplePOS
             }
             catch (FusionException fe)
             {
-                if(fe.ErrorRecoveryRequired)
+                if (fe.ErrorRecoveryRequired)
                 {
                     await PerformErrorRecovery();
                 }
@@ -455,7 +500,7 @@ namespace SimplePOS
                         ServiceID = appState.MessageHeader.ServiceID
                     }
                 };
-                
+
                 try
                 {
                     var r = await fusionClient.SendRecvAsync<TransactionStatusResponse>(transactionStatusRequest);
@@ -618,7 +663,7 @@ namespace SimplePOS
             SetText(TxtPaymentDialogText, displayText);
 
 
-            if(enableCancel)
+            if (enableCancel)
             {
                 BusyIndicator.Visibility = Visibility.Visible;
                 ((System.Windows.Media.Animation.Storyboard)FindResource("WaitStoryboard")).Begin();
@@ -655,5 +700,28 @@ namespace SimplePOS
 
 
         #endregion
+
+        private async void BtnLogout_Click(object sender, RoutedEventArgs e)
+        {
+            string paymentTypeName = "LOGOUT";
+            ShowPaymentDialog(paymentTypeName, "LOGOUT IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
+
+            try
+            {
+                LogoutResponse r = await fusionClient.SendRecvAsync<LogoutResponse>(new LogoutRequest());
+                if (r.Response.Result != Result.Failure)
+                {
+                    ShowPaymentDialog(paymentTypeName, "LOGOUT SUCCESS", "", "", LightBoxDialogType.Success, true, false);
+                }
+                else
+                {
+                    ShowPaymentDialog(paymentTypeName, "LOGOUT FAILED", r.Response.ErrorCondition.ToString(), r.Response.AdditionalResponse, LightBoxDialogType.Error, true, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowPaymentDialogFailed(paymentTypeName, null, ex.Message);
+            }
+        }
     }
 }

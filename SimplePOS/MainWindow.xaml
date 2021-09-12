@@ -282,6 +282,7 @@
                 </ScrollViewer>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,8,0" >
                     <Button x:Name="BtnReconciliation" Content="Settle" Click="BtnReconciliation_Click" Height="40" VerticalAlignment="Top"/>
+                    <!--<Button x:Name="BtnLogout" Content="Logout" Click="BtnLogout_Click" Height="40" VerticalAlignment="Top"/>-->
                     <Button x:Name="BtnLastTxnStatus" Content="Last Txn Status" Click="BtnLastTxnStatus_Click" Height="40" VerticalAlignment="Top"/>
                     <Button x:Name="BtnPayment" Content="Payment" Click="BtnPayment_Click" Height="40" VerticalAlignment="Top"/>
                 </StackPanel>
