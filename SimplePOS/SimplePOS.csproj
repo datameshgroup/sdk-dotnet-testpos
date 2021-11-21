@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DataMeshGroup.Fusion.FusionClient" Version="1.0.8" />
+    <PackageReference Include="DataMeshGroup.Fusion.FusionClient" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
