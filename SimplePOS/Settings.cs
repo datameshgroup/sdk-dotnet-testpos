@@ -180,6 +180,23 @@ namespace SimplePOS
         }
 
 
+        private bool enableVolumeTest;
+        public bool EnableVolumeTest
+        {
+            get => enableVolumeTest;
+            set
+            {
+                if (value != enableVolumeTest)
+                {
+                    enableVolumeTest = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        
+
+
 
         #region INotifyPropertyChanged
         public event PropertyChangedEventHandler PropertyChanged;

@@ -4,7 +4,9 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -72,7 +74,11 @@ namespace SimplePOS
 
             if (appState?.PaymentInProgress == true)
             {
-                await PerformErrorRecovery();
+                PaymentUIResponse r = await PerformErrorRecovery();
+                if(r != null)
+                {
+                    DisplayPaymentUIResponse(r);
+                }
             }
         }
 
@@ -83,6 +89,9 @@ namespace SimplePOS
             {
                 await fusionClient.DisconnectAsync();
                 fusionClient.OnLog -= FusionClient_OnLog;
+                fusionClient.OnConnect -= FusionClient_OnConnect;
+                fusionClient.OnDisconnect -= FusionClient_OnDisconnect;
+                fusionClient.OnConnectError -= FusionClient_OnConnectError;
                 fusionClient.Dispose();
                 fusionClient = null;
             }
@@ -98,11 +107,946 @@ namespace SimplePOS
             };
             fusionClient.URL = string.IsNullOrWhiteSpace(Settings.CustomNexoURL) ? fusionClient.URL : UnifyURL.Custom;
             fusionClient.OnLog += FusionClient_OnLog;
+            fusionClient.OnConnect += FusionClient_OnConnect;
+            fusionClient.OnDisconnect += FusionClient_OnDisconnect;
+            fusionClient.OnConnectError += FusionClient_OnConnectError;
         }
 
-        private void FusionClient_OnLog(object sender, DataMeshGroup.Fusion.LogEventArgs e)
+        private void FusionClient_OnConnectError(object sender, EventArgs e)
+        {
+            AppendPaymentEvent(DateTime.Now, "SocketConnectError");
+        }
+
+        private void FusionClient_OnDisconnect(object sender, EventArgs e)
+        {
+            AppendPaymentEvent(DateTime.Now, "SocketDisconnect");
+        }
+
+        private void FusionClient_OnConnect(object sender, EventArgs e)
+        {
+            AppendPaymentEvent(DateTime.Now, "SocketConnect");
+        }
+
+        private void FusionClient_OnLog(object sender, LogEventArgs e)
         {
             File.AppendAllText("log.txt", $"{e.CreatedDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff")} - {e.LogLevel.ToString().PadRight(12, ' ')} - {e.Data} {e.Exception?.Message ?? ""}{Environment.NewLine}");
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        /// <summary>
+        /// Appends an event to the PaymentEvents.csv log
+        /// </summary>
+        private void AppendPaymentEvent(DateTime dateTime, string eventName, long eventDuration = 0, bool? eventSuccess = null)
+        {
+            if (settings.EnableLogFile)
+            {
+                // Write out format ... Date,Time,Event,PaymentDuration,Result
+                string s = $"{dateTime:yyyy-MM-dd},{dateTime:HH:mm:ss.fff},{eventName},{eventDuration},{(eventSuccess == true ? "Success" : "Failure")}{Environment.NewLine}";
+                File.AppendAllText("PaymentEvents.csv", s);
+            }
         }
 
         #region Settings & AppState
@@ -172,6 +1116,52 @@ namespace SimplePOS
 
         private async void BtnPayment_Click(object sender, RoutedEventArgs e)
         {
+            do
+            {
+                // Perform payment
+                DateTime dateTime = DateTime.Now;
+                long tc64 = Environment.TickCount64;
+                PaymentUIResponse paymentUIResponse = await DoPayment();
+                tc64 = Environment.TickCount64 - tc64;
+                
+                AppendPaymentEvent(DateTime.Now, "Payment", tc64, paymentUIResponse?.PaymentResponse?.Response.Success);
+
+                // Display if not in test mode
+                if (!settings.EnableVolumeTest)
+                {
+                    DisplayPaymentUIResponse(paymentUIResponse);
+                }
+            } while (settings.EnableVolumeTest);
+        }
+
+
+        /// <summary>
+        /// Displays a <see cref="PaymentUIResponse"/> and waits for user to acknowledge
+        /// </summary>
+        private void DisplayPaymentUIResponse(PaymentUIResponse paymentUIResponse)
+        {
+            if (paymentUIResponse == null)
+            {
+                ShowPaymentDialogFailed("ERROR", "UNABLE TO DISPLAY RESULT");
+                return;
+            }
+            else if(!paymentUIResponse.Success)
+            {
+                ShowPaymentDialogFailed(paymentUIResponse.PaymentType, paymentUIResponse.ErrorTitle, paymentUIResponse.ErrorText);
+            }
+            else
+            {
+                ShowPaymentDialogSuccess(paymentUIResponse.PaymentType, paymentUIResponse.PaymentResponse);
+            }
+        }
+
+
+        /// <summary>
+        /// Perform a payment based on current app state and returns a response to display on the UI
+        /// </summary>
+        /// <returns></returns>
+        private async Task<PaymentUIResponse> DoPayment()
+        {
             // Validate input
             PaymentType paymentType;
             string paymentTypeName;
@@ -194,17 +1184,15 @@ namespace SimplePOS
 
             if (!decimal.TryParse(TxtPurchaseAmount.Text, out decimal purchaseAmount))
             {
-                ShowPaymentDialogFailed(paymentTypeName, "INVALID AMOUNT");
-                return;
+                return new PaymentUIResponse() { PaymentType = paymentTypeName, ErrorTitle = "INVALID AMOUNT" };
             }
+
             // Tip amount can be null
             decimal? tipAmount = decimal.TryParse(TxtTipAmount.Text, out decimal tmpTipAmount) ? tmpTipAmount : null;
             // Cash amount can be null
             decimal? cashoutAmount = decimal.TryParse(TxtCashoutAmount.Text, out decimal tmpCashoutAmount) ? tmpCashoutAmount : null;
             bool requestCardToken = ChkRequestToken.IsChecked ?? false;
             //string cardToken = string.IsNullOrWhiteSpace(TxtCardToken.Text) ? null : TxtCardToken.Text;
-
-
 
             ShowPaymentDialog(paymentTypeName, "PAYMENT IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
 
@@ -288,6 +1276,7 @@ namespace SimplePOS
 
 
             // Check environment 
+            PaymentUIResponse paymentUIResponse = new PaymentUIResponse();
             try
             {
                 SaleToPOIMessage saleToPoiRequest = await fusionClient.SendAsync(paymentRequest);
@@ -298,24 +1287,15 @@ namespace SimplePOS
                     switch (await fusionClient.RecvAsync())
                     {
                         case PaymentResponse r:
-                            // Validate SaleTransactionID
-                            if (r.SaleData?.SaleTransactionID != null && !r.SaleData.SaleTransactionID.Equals(paymentRequest.SaleData.SaleTransactionID))
-                            {
-                                // Ignore unexpected result
-                                continue;
-                            }
-
-                            if (r.Response.Result != Result.Failure)
-                            {
-                                ShowPaymentDialogSuccess(paymentTypeName, r);
-                            }
-                            else
-                            {
-                                ShowPaymentDialogFailed(paymentTypeName, r.Response?.ErrorCondition.ToString(), r.Response?.AdditionalResponse);
-                            }
-
                             UpdateAppState(false);
                             waitingForResponse = false;
+                            
+                            paymentUIResponse.PaymentResponse = r;
+                            if (!r.Response.Success)
+                            {
+                                paymentUIResponse.ErrorTitle = r.Response?.ErrorCondition.ToString();
+                                paymentUIResponse.ErrorText = r.Response?.AdditionalResponse;
+                            }
                             break;
 
                         case LoginResponse r:
@@ -338,18 +1318,22 @@ namespace SimplePOS
             {
                 if (fe.ErrorRecoveryRequired)
                 {
-                    await PerformErrorRecovery();
+                    paymentUIResponse = await PerformErrorRecovery();
                 }
                 else
                 {
-                    ShowPaymentDialogFailed(paymentTypeName, null, fe.Message);
+                    paymentUIResponse.ErrorText = fe.Message;
                 }
             }
             catch (Exception ex)
             {
-                ShowPaymentDialogFailed(paymentTypeName, "UNKNOWN ERROR", ex.Message);
+                paymentUIResponse.ErrorTitle = "UNKNOWN ERROR";
+                paymentUIResponse.ErrorText = ex.Message;
             }
+
+            return paymentUIResponse;
         }
+
 
         private async void BtnReconciliation_Click(object sender, RoutedEventArgs e)
         {
@@ -381,20 +1365,20 @@ namespace SimplePOS
             string title = "NO LAST TRANSACTION";
 
             // Exit if we don't have anything to recover
-            if (appState is null || appState.MessageHeader is null)
-            {
-                ShowPaymentDialog(caption, title, null, null, LightBoxDialogType.Normal, true, false);
-                return;
-            }
+            //if (appState is null || appState.MessageHeader is null)
+            //{
+            //    ShowPaymentDialog(caption, title, null, null, LightBoxDialogType.Normal, true, false);
+            //    return;
+            //}
 
             var transactionStatusRequest = new TransactionStatusRequest()
             {
                 MessageReference = new MessageReference()
                 {
-                    MessageCategory = appState.MessageHeader.MessageCategory,
-                    POIID = appState.MessageHeader.POIID,
-                    SaleID = appState.MessageHeader.SaleID,
-                    ServiceID = appState.MessageHeader.ServiceID
+                    MessageCategory = appState?.MessageHeader?.MessageCategory ?? MessageCategory.Payment,
+                    POIID = appState?.MessageHeader?.POIID,
+                    SaleID = appState?.MessageHeader?.SaleID,
+                    ServiceID = appState?.MessageHeader?.ServiceID
                 }
             };
 
@@ -446,6 +1430,8 @@ namespace SimplePOS
 
         private async void BtnDialogCancel_Click(object sender, RoutedEventArgs e)
         {
+            settings.EnableVolumeTest = false;
+
             // Try cancel of payment if one is in progress, otherwise just close this dialog
             if (appState.PaymentInProgress && appState?.MessageHeader is not null)
             {
@@ -461,20 +1447,113 @@ namespace SimplePOS
                     }
                 };
 
-                _ = await fusionClient.SendAsync(abortRequest);
+                try
+                {
+                    _ = await fusionClient.SendAsync(abortRequest);
+                }
+                catch(FusionException fe)
+                {
+                    // Throws FusionException when Internet is down
+                }
+
                 return;
             }
-
             UpdateAppState(false);
             NavigateToMainPage();
         }
 
-        private async Task PerformErrorRecovery()
+
+        //private async Task<(PaymentResponse paymentResponse, string paymentType, string errorTitle, string errorText)> PerformErrorRecovery()
+        //{
+        //    // Exit if we don't have anything to recover
+        //    if (appState is null || appState.PaymentInProgress == false || appState.MessageHeader is null)
+        //    {
+        //        return;
+        //    }
+
+        //    // 
+        //    string caption = "RECOVERING PAYMENT";
+        //    string title = "PAYMENT RECOVERY IN PROGRESS";
+        //    ShowPaymentDialog(caption, title, null, null, LightBoxDialogType.Normal, false, true);
+
+        //    var timeout = TimeSpan.FromSeconds(90);
+        //    var requestDelay = TimeSpan.FromSeconds(10);
+        //    var timeoutTimer = new System.Diagnostics.Stopwatch();
+        //    timeoutTimer.Start();
+
+        //    bool errorRecoveryInProgress = true;
+        //    while (errorRecoveryInProgress && appState.PaymentInProgress)
+        //    {
+        //        var transactionStatusRequest = new TransactionStatusRequest()
+        //        {
+        //            MessageReference = new MessageReference()
+        //            {
+        //                MessageCategory = appState.MessageHeader.MessageCategory,
+        //                POIID = appState.MessageHeader.POIID,
+        //                SaleID = appState.MessageHeader.SaleID,
+        //                ServiceID = appState.MessageHeader.ServiceID
+        //            }
+        //        };
+
+        //        try
+        //        {
+        //            TransactionStatusResponse r = await fusionClient.SendRecvAsync<TransactionStatusResponse>(transactionStatusRequest);
+
+        //            // If the response to our TransactionStatus request is "Success", we have a PaymentResponse to check
+        //            if (r.Response.Result == Result.Success)
+        //            {
+        //                if (r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response.Result != Result.Failure)
+        //                {
+        //                    ShowPaymentDialogSuccess(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse);
+        //                }
+        //                else
+        //                {
+        //                    ShowPaymentDialogFailed(caption, null, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse);
+        //                }
+
+        //                errorRecoveryInProgress = false;
+        //            }
+        //            // else if the transaction is still in progress, and we haven't reached out timeout
+        //            else if (r.Response.ErrorCondition == ErrorCondition.InProgress && timeoutTimer.Elapsed < timeout)
+        //            {
+        //                ShowPaymentDialog(caption, title, "PAYMENT IN PROGRESS", "", LightBoxDialogType.Normal, false, true);
+        //            }
+        //            // otherwise, fail
+        //            else
+        //            {
+        //                ShowPaymentDialogFailed(caption, null, r.Response?.AdditionalResponse);
+        //                errorRecoveryInProgress = false;
+        //            }
+        //        }
+        //        catch (DataMeshGroup.Fusion.NetworkException ne)
+        //        {
+        //            ShowPaymentDialog(caption, title, "WAITING FOR CONNECTION...", ne.Message, LightBoxDialogType.Normal, false, true);
+        //        }
+        //        catch (DataMeshGroup.Fusion.TimeoutException)
+        //        {
+        //            ShowPaymentDialog(caption, title, "TIMEOUT WAITING FOR HOST...", null, LightBoxDialogType.Normal, false, true);
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            ShowPaymentDialog(caption, title, "WAITING FOR CONNECTION...", ex.Message, LightBoxDialogType.Normal, false, true);
+        //        }
+
+        //        if (errorRecoveryInProgress)
+        //        {
+        //            await Task.Delay(requestDelay);
+        //        }
+        //    }
+
+        //    UpdateAppState(false);
+        //}
+
+
+        private async Task<PaymentUIResponse> PerformErrorRecovery()
         {
             // Exit if we don't have anything to recover
             if (appState is null || appState.PaymentInProgress == false || appState.MessageHeader is null)
             {
-                return;
+                return null;
             }
 
             // 
@@ -482,15 +1561,16 @@ namespace SimplePOS
             string title = "PAYMENT RECOVERY IN PROGRESS";
             ShowPaymentDialog(caption, title, null, null, LightBoxDialogType.Normal, false, true);
 
-            var timeout = TimeSpan.FromSeconds(90);
-            var requestDelay = TimeSpan.FromSeconds(10);
-            var timeoutTimer = new System.Diagnostics.Stopwatch();
+            TimeSpan timeout = TimeSpan.FromSeconds(90);
+            TimeSpan requestDelay = TimeSpan.FromSeconds(10);
+            Stopwatch timeoutTimer = new Stopwatch();
             timeoutTimer.Start();
 
+            PaymentUIResponse paymentUIResponse = new PaymentUIResponse();
             bool errorRecoveryInProgress = true;
             while (errorRecoveryInProgress && appState.PaymentInProgress)
             {
-                var transactionStatusRequest = new TransactionStatusRequest()
+                TransactionStatusRequest transactionStatusRequest = new TransactionStatusRequest()
                 {
                     MessageReference = new MessageReference()
                     {
@@ -503,18 +1583,16 @@ namespace SimplePOS
 
                 try
                 {
-                    var r = await fusionClient.SendRecvAsync<TransactionStatusResponse>(transactionStatusRequest);
+                    TransactionStatusResponse r = await fusionClient.SendRecvAsync<TransactionStatusResponse>(transactionStatusRequest);
 
                     // If the response to our TransactionStatus request is "Success", we have a PaymentResponse to check
                     if (r.Response.Result == Result.Success)
                     {
-                        if (r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response.Result != Result.Failure)
+                        paymentUIResponse.PaymentResponse = r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse;
+
+                        if (!r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response.Success)
                         {
-                            ShowPaymentDialogSuccess(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse);
-                        }
-                        else
-                        {
-                            ShowPaymentDialogFailed(caption, null, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse);
+                            paymentUIResponse.ErrorText = r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse;
                         }
 
                         errorRecoveryInProgress = false;
@@ -527,7 +1605,7 @@ namespace SimplePOS
                     // otherwise, fail
                     else
                     {
-                        ShowPaymentDialogFailed(caption, null, r.Response?.AdditionalResponse);
+                        paymentUIResponse.ErrorText = r.Response?.AdditionalResponse;
                         errorRecoveryInProgress = false;
                     }
                 }
@@ -551,6 +1629,9 @@ namespace SimplePOS
             }
 
             UpdateAppState(false);
+
+            // return result
+            return paymentUIResponse;
         }
 
 
@@ -723,5 +1804,25 @@ namespace SimplePOS
                 ShowPaymentDialogFailed(paymentTypeName, null, ex.Message);
             }
         }
+    }
+
+
+    /// <summary>
+    /// Wrapper for a payment response to be displayed on the UI
+    /// </summary>
+    public class PaymentUIResponse
+    {
+        public bool Success
+        {
+            get
+            {
+                return PaymentResponse?.Response.Success == true;
+            }
+        }
+
+        public PaymentResponse PaymentResponse { get; set; }
+        public string PaymentType { get; set; }
+        public string ErrorTitle { get; set; }
+        public string ErrorText { get; set; }
     }
 }

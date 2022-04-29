@@ -188,6 +188,12 @@
                             <TextBox x:Name="TxtShiftNumber" Text="{Binding Settings.ShiftNumber, Mode=TwoWay}"/>
                         </WrapPanel>
 
+                        <Label Content="Testing" Style="{StaticResource SubTitleLabel}"/>
+                        <WrapPanel>
+                            <Label Content="Enable volume test"/>
+                            <CheckBox x:Name="CheckEnableVolumeTest" IsThreeState="False" VerticalAlignment="Center" IsChecked="{Binding Settings.EnableVolumeTest, Mode=TwoWay}"/>
+                        </WrapPanel>
+                        
                         <Label Content="Other Settings" Style="{StaticResource SubTitleLabel}"/>
                         <WrapPanel>
                             <Label Content="UAT environment"/>
@@ -195,7 +201,12 @@
                         </WrapPanel>
                         <WrapPanel>
                             <Label Content="Custom Nexo URL"/>
-                            <TextBox x:Name="TxtCustomNexoURL" Text="{Binding Settings.CustomNexoURL, Mode=TwoWay}"/>
+                            <ComboBox x:Name="CboCustomNexoURL" IsEditable="True" Text="{Binding Settings.CustomNexoURL, Mode=TwoWay}">
+                                <ComboBoxItem Content=""/>
+                                <ComboBoxItem Content="wss://cloudposintegration.io/nexodev"/>
+                                <ComboBoxItem Content="wss://cloudposintegration.io/nexouat"/>
+                                <ComboBoxItem Content="wss://cloudposintegration.io/nexouat1"/>
+                            </ComboBox>
                         </WrapPanel>
                         <WrapPanel>
                             <Label Content="Save log"/>
