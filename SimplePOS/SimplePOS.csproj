@@ -4,7 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <Version>1.0.6</Version>
+    <Version>1.0.7</Version>
     <Authors>Clinton Dean</Authors>
     <Company>DataMesh Group</Company>
     <Product>SimplePOS</Product>
@@ -12,11 +12,21 @@
 
   <ItemGroup>
     <None Remove="Fonts\fontawesome-webfont.ttf" />
+    <None Remove="Images\CryptoDotCom.png" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DataMeshGroup.Fusion.FusionClient" Version="1.2.2" />
+    <Resource Include="Images\CryptoDotCom.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\sdk-dotnet\DataMeshGroup.Fusion\DataMeshGroup.Fusion.csproj" />
   </ItemGroup>
 
   <ItemGroup>
