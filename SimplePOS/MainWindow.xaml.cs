@@ -132,910 +132,6 @@ namespace SimplePOS
             File.AppendAllText("log.txt", $"{e.CreatedDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff")} - {e.LogLevel.ToString().PadRight(12, ' ')} - {e.Data} {e.Exception?.Message ?? ""}{Environment.NewLine}");
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         /// <summary>
         /// Appends an event to the PaymentEvents.csv log
         /// </summary>
@@ -1049,7 +145,7 @@ namespace SimplePOS
             }
         }
 
-        #region Settings & AppState
+        #region Settings, AppState, & Mock Data
 
         private Settings LoadSettings()
         {
@@ -1086,6 +182,14 @@ namespace SimplePOS
             File.WriteAllText("appstate.json", JsonConvert.SerializeObject(appState));
         }
 
+        private MockData LoadMockData()
+        {
+            if (!File.Exists("mockdata.json"))
+                return new MockData() { SaleItems = null };
+
+            return JsonConvert.DeserializeObject<MockData>(File.ReadAllText("mockdata.json"));
+        }
+
         #endregion
 
         #region Navigation
@@ -1112,26 +216,6 @@ namespace SimplePOS
         private void BtnViewSettings_Click(object sender, RoutedEventArgs e)
         {
             NavigateToSettingsPage();
-        }
-
-        private async void BtnPaymentCryptoDotCom_Click(object sender, RoutedEventArgs e)
-        {
-            do
-            {
-                // Perform payment
-                DateTime dateTime = DateTime.Now;
-                long tc64 = Environment.TickCount64;
-                PaymentUIResponse paymentUIResponse = await DoPayment(PaymentBrand.CryptoDotCom);
-                tc64 = Environment.TickCount64 - tc64;
-
-                AppendPaymentEvent(DateTime.Now, "Payment", tc64, paymentUIResponse?.PaymentResponse?.Response.Success);
-
-                // Display if not in test mode
-                if (!settings.EnableVolumeTest)
-                {
-                    DisplayPaymentUIResponse(paymentUIResponse);
-                }
-            } while (settings.EnableVolumeTest);
         }
 
         private async void BtnPayment_Click(object sender, RoutedEventArgs e)
@@ -1180,7 +264,7 @@ namespace SimplePOS
         /// Perform a payment based on current app state and returns a response to display on the UI
         /// </summary>
         /// <returns></returns>
-        private async Task<PaymentUIResponse> DoPayment(PaymentBrand? paymentBrand = null)
+        private async Task<PaymentUIResponse> DoPayment()
         {
             // Validate input
             PaymentType paymentType;
@@ -1223,65 +307,65 @@ namespace SimplePOS
                 paymentType: paymentType
                 );
 
-            // Allowed payment brand
-            if(paymentBrand.HasValue)
-            {
-                paymentRequest.PaymentTransaction.TransactionConditions = new TransactionConditions()
-                {
-                    AllowedPaymentBrands = new List<PaymentBrand>()
-                    {
-                        paymentBrand.Value
-                    }
-                };
-            }
+            MockData mockData = LoadMockData();
 
-            // Create sale item
-            SaleItem parentItem = paymentRequest.AddSaleItem(
-                productCode: "XXVH776",
-                productLabel: "Big Kahuna Burger",
-                itemAmount: purchaseAmount,
-                category: "food",
-                subCategory: "mains"
-                );
-            // Sale item modifiers
-            paymentRequest.AddSaleItem(
-                    productCode: "XXVH776-0",
-                    productLabel: "Extra pineapple",
-                    parentItemID: parentItem.ItemID,
-                    itemAmount: 0,
+            if ((mockData.SaleItems != null) && (mockData.SaleItems.Count > 0))
+            {
+                foreach (SaleItem saleItem in mockData.SaleItems)
+                {
+                    paymentRequest.AddSaleItem(productCode: saleItem.ProductCode, productLabel: saleItem.ProductLabel, itemAmount: saleItem.ItemAmount);
+                }
+            }
+            else
+            {
+                // Create sale item
+                SaleItem parentItem = paymentRequest.AddSaleItem(
+                    productCode: "XXVH776",
+                    productLabel: "Big Kahuna Burger",
+                    itemAmount: purchaseAmount,
                     category: "food",
                     subCategory: "mains"
                     );
-            paymentRequest.AddSaleItem(
-                productCode: "XXVH776-1",
-                productLabel: "Side of fries",
-                parentItemID: parentItem.ItemID,
-                itemAmount: 0,
-                category: "food",
-                subCategory: "sides"
-                );
-            // Full sale item
-            //paymentRequest.AddSaleItem(
-            //    productCode: "AB54447",
-            //    productLabel: "Das Keyboard 4 Ultimate",
-            //    itemAmount: 449.95M,
-            //    quantity: 1,
-            //    unitOfMeasure: UnitOfMeasure.Other,
-            //    eanUpc: "DASK4ULTMBLU",
-            //    additionalProductInfo: "Mechanical Keyboard - Cherry MX Blue switch",
-            //    unitPrice: 299.95M,
-            //    taxCode: "GST",
-            //    costBase: 249.95m,
-            //    discount: 50.00m,
-            //    discountReason: "$50 voucher",
-            //    categories: new List<string>() { "Input Devices", "Keyboards", "Mechanical Keyboards" },
-            //    brand: "Das",
-            //    quantityInStock: 42,
-            //    pageURL: "https://mypage/keyboards/AB54447.html",
-            //    imageURLs: new List<string>() { "https://mypage/keyboards/AB54447.jpg" },
-            //    weight: 1.5m,
-            //    weightUnitOfMeasure: WeightUnitOfMeasure.Kilogram
-            //    );
+                // Sale item modifiers
+                paymentRequest.AddSaleItem(
+                        productCode: "XXVH776-0",
+                        productLabel: "Extra pineapple",
+                        parentItemID: parentItem.ItemID,
+                       itemAmount: 0,
+                       category: "food",
+                       subCategory: "mains"
+                       );
+                paymentRequest.AddSaleItem(
+                    productCode: "XXVH776-1",
+                   productLabel: "Side of fries",
+                   parentItemID: parentItem.ItemID,
+                   itemAmount: 0,
+                   category: "food",
+                   subCategory: "sides"
+                   );
+                // Full sale item
+                //paymentRequest.AddSaleItem(
+                //    productCode: "AB54447",
+                //    productLabel: "Das Keyboard 4 Ultimate",
+                //    itemAmount: 449.95M,
+                //    quantity: 1,
+                //    unitOfMeasure: UnitOfMeasure.Other,
+                //    eanUpc: "DASK4ULTMBLU",
+                //    additionalProductInfo: "Mechanical Keyboard - Cherry MX Blue switch",
+                //    unitPrice: 299.95M,
+                //    taxCode: "GST",
+                //    costBase: 249.95m,
+                //    discount: 50.00m,
+                //    discountReason: "$50 voucher",
+                //    categories: new List<string>() { "Input Devices", "Keyboards", "Mechanical Keyboards" },
+                //    brand: "Das",
+                //    quantityInStock: 42,
+                //    pageURL: "https://mypage/keyboards/AB54447.html",
+                //    imageURLs: new List<string>() { "https://mypage/keyboards/AB54447.jpg" },
+                //    weight: 1.5m,
+                //    weightUnitOfMeasure: WeightUnitOfMeasure.Kilogram
+                //    );
+            }
 
             // Add extra fields
             paymentRequest.PaymentTransaction.AmountsReq.CashBackAmount = cashoutAmount;
@@ -1493,6 +577,92 @@ namespace SimplePOS
             UpdateAppState(false);
             NavigateToMainPage();
         }
+
+
+        //private async Task<(PaymentResponse paymentResponse, string paymentType, string errorTitle, string errorText)> PerformErrorRecovery()
+        //{
+        //    // Exit if we don't have anything to recover
+        //    if (appState is null || appState.PaymentInProgress == false || appState.MessageHeader is null)
+        //    {
+        //        return;
+        //    }
+
+        //    // 
+        //    string caption = "RECOVERING PAYMENT";
+        //    string title = "PAYMENT RECOVERY IN PROGRESS";
+        //    ShowPaymentDialog(caption, title, null, null, LightBoxDialogType.Normal, false, true);
+
+        //    var timeout = TimeSpan.FromSeconds(90);
+        //    var requestDelay = TimeSpan.FromSeconds(10);
+        //    var timeoutTimer = new System.Diagnostics.Stopwatch();
+        //    timeoutTimer.Start();
+
+        //    bool errorRecoveryInProgress = true;
+        //    while (errorRecoveryInProgress && appState.PaymentInProgress)
+        //    {
+        //        var transactionStatusRequest = new TransactionStatusRequest()
+        //        {
+        //            MessageReference = new MessageReference()
+        //            {
+        //                MessageCategory = appState.MessageHeader.MessageCategory,
+        //                POIID = appState.MessageHeader.POIID,
+        //                SaleID = appState.MessageHeader.SaleID,
+        //                ServiceID = appState.MessageHeader.ServiceID
+        //            }
+        //        };
+
+        //        try
+        //        {
+        //            TransactionStatusResponse r = await fusionClient.SendRecvAsync<TransactionStatusResponse>(transactionStatusRequest);
+
+        //            // If the response to our TransactionStatus request is "Success", we have a PaymentResponse to check
+        //            if (r.Response.Result == Result.Success)
+        //            {
+        //                if (r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response.Result != Result.Failure)
+        //                {
+        //                    ShowPaymentDialogSuccess(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse);
+        //                }
+        //                else
+        //                {
+        //                    ShowPaymentDialogFailed(caption, null, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse);
+        //                }
+
+        //                errorRecoveryInProgress = false;
+        //            }
+        //            // else if the transaction is still in progress, and we haven't reached out timeout
+        //            else if (r.Response.ErrorCondition == ErrorCondition.InProgress && timeoutTimer.Elapsed < timeout)
+        //            {
+        //                ShowPaymentDialog(caption, title, "PAYMENT IN PROGRESS", "", LightBoxDialogType.Normal, false, true);
+        //            }
+        //            // otherwise, fail
+        //            else
+        //            {
+        //                ShowPaymentDialogFailed(caption, null, r.Response?.AdditionalResponse);
+        //                errorRecoveryInProgress = false;
+        //            }
+        //        }
+        //        catch (DataMeshGroup.Fusion.NetworkException ne)
+        //        {
+        //            ShowPaymentDialog(caption, title, "WAITING FOR CONNECTION...", ne.Message, LightBoxDialogType.Normal, false, true);
+        //        }
+        //        catch (DataMeshGroup.Fusion.TimeoutException)
+        //        {
+        //            ShowPaymentDialog(caption, title, "TIMEOUT WAITING FOR HOST...", null, LightBoxDialogType.Normal, false, true);
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            ShowPaymentDialog(caption, title, "WAITING FOR CONNECTION...", ex.Message, LightBoxDialogType.Normal, false, true);
+        //        }
+
+        //        if (errorRecoveryInProgress)
+        //        {
+        //            await Task.Delay(requestDelay);
+        //        }
+        //    }
+
+        //    UpdateAppState(false);
+        //}
+
 
         private async Task<PaymentUIResponse> PerformErrorRecovery()
         {
@@ -1750,8 +920,6 @@ namespace SimplePOS
                 ShowPaymentDialogFailed(paymentTypeName, null, ex.Message);
             }
         }
-
-
     }
 
 
