@@ -26,6 +26,13 @@ namespace SimplePOS
         private Settings settings;
         private IFusionClient fusionClient;
 
+        //File paths
+        private string settingsFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+        private string appStateFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appstate.json");
+        private string mockDataFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mockdata.json");
+        private string paymentEventsPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PaymentEvents.csv");
+        private string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log.txt");
+
         public Task Initialization { get; private set; }
 
         public Settings Settings
@@ -129,7 +136,7 @@ namespace SimplePOS
 
         private void FusionClient_OnLog(object sender, LogEventArgs e)
         {
-            File.AppendAllText("log.txt", $"{e.CreatedDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff")} - {e.LogLevel.ToString().PadRight(12, ' ')} - {e.Data} {e.Exception?.Message ?? ""}{Environment.NewLine}");
+            File.AppendAllText(logPath, $"{e.CreatedDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff")} - {e.LogLevel.ToString().PadRight(12, ' ')} - {e.Data} {e.Exception?.Message ?? ""}{Environment.NewLine}");
         }
 
         /// <summary>
@@ -141,7 +148,7 @@ namespace SimplePOS
             {
                 // Write out format ... Date,Time,Event,PaymentDuration,Result
                 string s = $"{dateTime:yyyy-MM-dd},{dateTime:HH:mm:ss.fff},{eventName},{eventDuration},{(eventSuccess == true ? "Success" : "Failure")}{Environment.NewLine}";
-                File.AppendAllText("PaymentEvents.csv", s);
+                File.AppendAllText(paymentEventsPath, s);
             }
         }
 
@@ -149,7 +156,7 @@ namespace SimplePOS
 
         private Settings LoadSettings()
         {
-            if (!File.Exists("settings.json"))
+            if (!File.Exists(settingsFilePath))
             {
                 NavigateToSettingsPage();
                 return new Settings()
@@ -166,12 +173,12 @@ namespace SimplePOS
                 };
             }
 
-            return JsonConvert.DeserializeObject<Settings>(File.ReadAllText("settings.json"));
+            return JsonConvert.DeserializeObject<Settings>(File.ReadAllText(settingsFilePath));
         }
 
         private AppState LoadAppState()
         {
-            return (!File.Exists("appstate.json")) ? new AppState() : JsonConvert.DeserializeObject<AppState>(File.ReadAllText("appstate.json"));
+            return (!File.Exists(appStateFilePath)) ? new AppState() : JsonConvert.DeserializeObject<AppState>(File.ReadAllText(appStateFilePath));
         }
 
         private void UpdateAppState(bool paymentInProgress, MessageHeader messageHeader = null)
@@ -179,15 +186,15 @@ namespace SimplePOS
             appState.PaymentInProgress = paymentInProgress;
             appState.MessageHeader = messageHeader ?? appState.MessageHeader;
 
-            File.WriteAllText("appstate.json", JsonConvert.SerializeObject(appState));
+            File.WriteAllText(appStateFilePath, JsonConvert.SerializeObject(appState));
         }
 
         private MockData LoadMockData()
         {
-            if (!File.Exists("mockdata.json"))
+            if (!File.Exists(mockDataFilePath))
                 return new MockData() { SaleItems = null };
 
-            return JsonConvert.DeserializeObject<MockData>(File.ReadAllText("mockdata.json"));
+            return JsonConvert.DeserializeObject<MockData>(File.ReadAllText(mockDataFilePath));
         }
 
         #endregion
@@ -208,7 +215,7 @@ namespace SimplePOS
 
         private async void BtnSaveSettings_Click(object sender, RoutedEventArgs e)
         {
-            File.WriteAllText("settings.json", System.Text.Json.JsonSerializer.Serialize<Settings>(Settings));
+            File.WriteAllText(settingsFilePath, System.Text.Json.JsonSerializer.Serialize<Settings>(Settings));
             await CreateFusionClient();
             NavigateToMainPage();
         }
