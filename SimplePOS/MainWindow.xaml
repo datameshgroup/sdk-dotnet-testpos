@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SimplePOS" d:DataContext="{d:DesignInstance Type=local:MainWindow}"
         mc:Ignorable="d"
-        Title="MainWindow" Height="640" Width="900">
+        Title="MainWindow" Height="768" Width="1024">
 
     <Window.Resources>
         <Storyboard x:Key="WaitStoryboard">
@@ -78,7 +78,7 @@
             <Setter Property="Width" Value="144" />
             <Setter Property="FontSize" Value="18" />
             <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="Margin" Value="2" />
         </Style>
 
         <Style TargetType="TextBlock">
@@ -137,85 +137,90 @@
             </Grid>
 
             <!--CONTENT-->
-            <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <!--<ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8">-->
+
+            <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" >
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
+                <StackPanel Margin="16,0,0,0">
+                    <Label Content="POS Lane Settings" Style="{StaticResource SubTitleLabel}"/>
+                    <WrapPanel>
+                        <Label Content="Sale ID"/>
+                        <TextBox x:Name="TxtSaleId" Text="{Binding Settings.SaleID, Mode=TwoWay}"/>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="POI ID"/>
+                        <TextBox x:Name="TxtPOIID" Text="{Binding Settings.POIID, Mode=TwoWay}"/>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="KEK"/>
+                        <TextBox x:Name="TxtKEK" Text="{Binding Settings.KEK, Mode=TwoWay}"/>
+                    </WrapPanel>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8">
-                    <StackPanel>
-                        <Label Content="POS Lane Settings" Style="{StaticResource SubTitleLabel}"/>
-                        <WrapPanel>
-                            <Label Content="Sale ID"/>
-                            <TextBox x:Name="TxtSaleId" Text="{Binding Settings.SaleID, Mode=TwoWay}"/>
-                        </WrapPanel>
-                        <WrapPanel>
-                            <Label Content="POI ID"/>
-                            <TextBox x:Name="TxtPOIID" Text="{Binding Settings.POIID, Mode=TwoWay}"/>
-                        </WrapPanel>
-                        <WrapPanel>
-                            <Label Content="KEK"/>
-                            <TextBox x:Name="TxtKEK" Text="{Binding Settings.KEK, Mode=TwoWay}"/>
-                        </WrapPanel>
+                    <Label Content="POS Software Settings" Style="{StaticResource SubTitleLabel}"/>
+                    <WrapPanel>
+                        <Label Content="Provider Identification"/>
+                        <TextBox x:Name="TxtProviderIdentification" Text="{Binding Settings.ProviderIdentification, Mode=TwoWay}"/>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="Application Name"/>
+                        <TextBox x:Name="TxtApplicationName" Text="{Binding Settings.ApplicationName, Mode=TwoWay}"/>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="Software Version"/>
+                        <TextBox x:Name="TxtSoftwareVersion" Text="{Binding Settings.SoftwareVersion, Mode=TwoWay}"/>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="Certification Code"/>
+                        <TextBox x:Name="TxtCertificationCode" Text="{Binding Settings.CertificationCode, Mode=TwoWay}"/>
+                    </WrapPanel>
+                </StackPanel>
 
-                        <Label Content="POS Software Settings" Style="{StaticResource SubTitleLabel}"/>
-                        <WrapPanel>
-                            <Label Content="Provider Identification"/>
-                            <TextBox x:Name="TxtProviderIdentification" Text="{Binding Settings.ProviderIdentification, Mode=TwoWay}"/>
-                        </WrapPanel>
-                        <WrapPanel>
-                            <Label Content="Application Name"/>
-                            <TextBox x:Name="TxtApplicationName" Text="{Binding Settings.ApplicationName, Mode=TwoWay}"/>
-                        </WrapPanel>
-                        <WrapPanel>
-                            <Label Content="Software Version"/>
-                            <TextBox x:Name="TxtSoftwareVersion" Text="{Binding Settings.SoftwareVersion, Mode=TwoWay}"/>
-                        </WrapPanel>
-                        <WrapPanel>
-                            <Label Content="Certification Code"/>
-                            <TextBox x:Name="TxtCertificationCode" Text="{Binding Settings.CertificationCode, Mode=TwoWay}"/>
-                        </WrapPanel>
+                <StackPanel Grid.Column="2" Margin="16,0,0,0">
+                    <Label Content="Shift Settings" Style="{StaticResource SubTitleLabel}"/>
+                    <WrapPanel>
+                        <Label Content="Operator ID"/>
+                        <TextBox x:Name="TxtOperatorID" Text="{Binding Settings.OperatorID, Mode=TwoWay}"/>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="Shift Number"/>
+                        <TextBox x:Name="TxtShiftNumber" Text="{Binding Settings.ShiftNumber, Mode=TwoWay}"/>
+                    </WrapPanel>
 
-                        <Label Content="Shift Settings" Style="{StaticResource SubTitleLabel}"/>
-                        <WrapPanel>
-                            <Label Content="Operator ID"/>
-                            <TextBox x:Name="TxtOperatorID" Text="{Binding Settings.OperatorID, Mode=TwoWay}"/>
-                        </WrapPanel>
-                        <WrapPanel>
-                            <Label Content="Shift Number"/>
-                            <TextBox x:Name="TxtShiftNumber" Text="{Binding Settings.ShiftNumber, Mode=TwoWay}"/>
-                        </WrapPanel>
+                    <Label Content="Testing" Style="{StaticResource SubTitleLabel}"/>
+                    <WrapPanel>
+                        <Label Content="Enable volume test"/>
+                        <CheckBox x:Name="CheckEnableVolumeTest" IsThreeState="False" VerticalAlignment="Center" IsChecked="{Binding Settings.EnableVolumeTest, Mode=TwoWay}"/>
+                    </WrapPanel>
 
-                        <Label Content="Testing" Style="{StaticResource SubTitleLabel}"/>
-                        <WrapPanel>
-                            <Label Content="Enable volume test"/>
-                            <CheckBox x:Name="CheckEnableVolumeTest" IsThreeState="False" VerticalAlignment="Center" IsChecked="{Binding Settings.EnableVolumeTest, Mode=TwoWay}"/>
-                        </WrapPanel>
-                        
-                        <Label Content="Other Settings" Style="{StaticResource SubTitleLabel}"/>
-                        <WrapPanel>
-                            <Label Content="UAT environment"/>
-                            <CheckBox x:Name="ChkUseTestEnvironment" IsThreeState="False" VerticalAlignment="Center" IsChecked="{Binding Settings.UseTestEnvironment, Mode=TwoWay}"/>
-                        </WrapPanel>
-                        <WrapPanel>
-                            <Label Content="Custom Nexo URL"/>
-                            <ComboBox x:Name="CboCustomNexoURL" IsEditable="True" Text="{Binding Settings.CustomNexoURL, Mode=TwoWay}">
-                                <ComboBoxItem Content=""/>
-                                <ComboBoxItem Content="wss://cloudposintegration.io/nexodev"/>
-                                <ComboBoxItem Content="wss://cloudposintegration.io/nexouat"/>
-                                <ComboBoxItem Content="wss://cloudposintegration.io/nexouat1"/>
-                            </ComboBox>
-                        </WrapPanel>
-                        <WrapPanel>
-                            <Label Content="Save log"/>
-                            <CheckBox x:Name="ChkSaveLogFile" IsThreeState="False" VerticalAlignment="Center" IsChecked="{Binding Settings.EnableLogFile, Mode=TwoWay}"/>
-                        </WrapPanel>
-                    </StackPanel>
-                </ScrollViewer>
+                    <Label Content="Other Settings" Style="{StaticResource SubTitleLabel}"/>
+                    <WrapPanel>
+                        <Label Content="UAT environment"/>
+                        <CheckBox x:Name="ChkUseTestEnvironment" IsThreeState="False" VerticalAlignment="Center" IsChecked="{Binding Settings.UseTestEnvironment, Mode=TwoWay}"/>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="Custom Nexo URL"/>
+                        <ComboBox x:Name="CboCustomNexoURL" IsEditable="True" Text="{Binding Settings.CustomNexoURL, Mode=TwoWay}">
+                            <ComboBoxItem Content=""/>
+                            <ComboBoxItem Content="wss://cloudposintegration.io/nexodev"/>
+                            <ComboBoxItem Content="wss://cloudposintegration.io/nexouat"/>
+                            <ComboBoxItem Content="wss://cloudposintegration.io/nexouat1"/>
+                        </ComboBox>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="Save log"/>
+                        <CheckBox x:Name="ChkSaveLogFile" IsThreeState="False" VerticalAlignment="Center" IsChecked="{Binding Settings.EnableLogFile, Mode=TwoWay}"/>
+                    </WrapPanel>
+                </StackPanel>
 
-                <Button x:Name="BtnSaveSettings" Grid.Row="1" Content="OK" Margin="8" HorizontalAlignment="Right" Click="BtnSaveSettings_Click"/>
+                <Button x:Name="BtnSaveSettings" Grid.Column="1" Grid.Row="1" Content="OK" Margin="0,16,0,0" HorizontalAlignment="Right" Click="BtnSaveSettings_Click"/>
             </Grid>
 
 
@@ -252,7 +257,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!--Left column-->
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Row="0" Padding="0,0,8,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Row="0" Padding="0,0,2,0">
                     <StackPanel>
                         <WrapPanel>
                             <Label Content="Transaction Type"/>
@@ -288,24 +293,25 @@
                             <TextBox x:Name="TxtCardToken" Text=""/>
                         </WrapPanel>
                         </WrapPanel>-->
-                        
+
                     </StackPanel>
                 </ScrollViewer>
 
                 <StackPanel Grid.Row="1" Margin="0,0,0,0" >
                     <Label Content="Tender Options" Style="{StaticResource SubTitleLabel}"/>
-                    <StackPanel Orientation="Horizontal" >
-                        <Button x:Name="BtnPaymentCryptoDotCom" Click="BtnPaymentCryptoDotCom_Click" Height="40" VerticalAlignment="Stretch">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="BtnPaymentCryptoDotCom" Click="BtnPaymentCryptoDotCom_Click" Height="40" VerticalAlignment="Stretch" Visibility="Collapsed">
                             <Image Source="/SimplePOS;component/Images/CryptoDotCom.png" Stretch="Fill"/>
                         </Button>
-                        <Button x:Name="BtnPayment" Content="EFT" Click="BtnPayment_Click" Height="40" VerticalAlignment="Top"/>
+                        <Button x:Name="BtnPayment" Content="EFT" Click="BtnPayment_Click" Height="40"  VerticalAlignment="Top"/>
                     </StackPanel>
-                    <Label Content="Utilities" Style="{StaticResource SubTitleLabel}" Margin="0,32,0,0"/>
-                    <StackPanel Orientation="Horizontal">
-                        <Button x:Name="BtnReconciliation" Content="Settle" Click="BtnReconciliation_Click" Height="40" VerticalAlignment="Top"/>
+                    <Label Content="Other Commands" Style="{StaticResource SubTitleLabel}" Margin="0,32,0,0"/>
+                    <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right" MaxWidth="500">
+                        <Button x:Name="BtnLogin" Content="Login" Click="BtnLogin_Click" Height="40" VerticalAlignment="Top"/>
                         <Button x:Name="BtnLogout" Content="Logout" Click="BtnLogout_Click" Height="40" VerticalAlignment="Top"/>
+                        <Button x:Name="BtnReconciliation" Content="Settle" Click="BtnReconciliation_Click" Height="40" VerticalAlignment="Top"/>
                         <Button x:Name="BtnLastTxnStatus" Content="Last Txn Status" Click="BtnLastTxnStatus_Click" Height="40" VerticalAlignment="Top"/>
-                    </StackPanel>                    
+                    </WrapPanel>
                 </StackPanel>
             </Grid>
 
@@ -416,27 +422,47 @@
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Column="0" Padding="0,0,8,0">
                             <StackPanel>
                                 <WrapPanel>
-                                    <Label Content="Amount"/>
+                                    <Label Content="Authorized amount"/>
                                     <TextBox Text="{Binding PaymentResponse.PaymentResult.AmountsResp.AuthorizedAmount, Mode=OneWay}"/>
                                 </WrapPanel>
                                 <WrapPanel>
-                                    <Label Content="Surcharge"/>
+                                    <Label Content="Surcharge amount"/>
                                     <TextBox Text="{Binding PaymentResponse.PaymentResult.AmountsResp.SurchargeAmount, Mode=OneWay}"/>
                                 </WrapPanel>
                                 <WrapPanel>
-                                    <Label Content="Tip"/>
+                                    <Label Content="Tip amount"/>
                                     <TextBox Text="{Binding PaymentResponse.PaymentResult.AmountsResp.TipAmount, Mode=OneWay}"/>
                                 </WrapPanel>
                                 <WrapPanel>
-                                    <Label Content="Cashout"/>
+                                    <Label Content="Cashout amount"/>
                                     <TextBox Text="{Binding PaymentResponse.PaymentResult.AmountsResp.CashBackAmount, Mode=OneWay}"/>
                                 </WrapPanel>
                                 <WrapPanel>
-                                    <Label Content="Card Scheme"/>
+                                    <Label Content="Partial authorized amount"/>
+                                    <TextBox Text="{Binding PaymentResponse.PaymentResult.AmountsResp.PartialAuthorizedAmount, Mode=OneWay}"/>
+                                </WrapPanel>
+                                <WrapPanel>
+                                    <Label Content="Total fees amount"/>
+                                    <TextBox Text="{Binding PaymentResponse.PaymentResult.AmountsResp.TotalFeesAmount, Mode=OneWay}"/>
+                                </WrapPanel>
+                                <WrapPanel>
+                                    <Label Content="Payment brand"/>
                                     <TextBox Text="{Binding PaymentResponse.PaymentResult.PaymentInstrumentData.CardData.PaymentBrand, Mode=OneWay}"/>
                                 </WrapPanel>
                                 <WrapPanel>
-                                    <Label Content="Card Token"/>
+                                    <Label Content="Entry mode"/>
+                                    <TextBox Text="{Binding PaymentResponse.PaymentResult.PaymentInstrumentData.CardData.EntryMode, Mode=OneWay}"/>
+                                </WrapPanel>
+                                <WrapPanel>
+                                    <Label Content="Masked PAN"/>
+                                    <TextBox Text="{Binding PaymentResponse.PaymentResult.PaymentInstrumentData.CardData.MaskedPAN, Mode=OneWay}"/>
+                                </WrapPanel>
+                                <WrapPanel>
+                                    <Label Content="Transaction ID"/>
+                                    <TextBox Text="{Binding PaymentResponse.POIData.POITransactionID.TransactionID, Mode=OneWay}"/>
+                                </WrapPanel>
+                                <WrapPanel>
+                                    <Label Content="Card token"/>
                                     <TextBox Text="{Binding PaymentResponse.PaymentResult.PaymentInstrumentData.CardData.PaymentToken.TokenValue, Mode=OneWay}"/>
                                 </WrapPanel>
                             </StackPanel>

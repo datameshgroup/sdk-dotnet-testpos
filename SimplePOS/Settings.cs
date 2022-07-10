@@ -10,6 +10,20 @@ namespace SimplePOS
             useTestEnvironment = true;
         }
 
+        private string profileName;
+        public string ProfileName
+        {
+            get => profileName ?? "default";
+            set
+            {
+                if (value != profileName)
+                {
+                    profileName = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
 
         private string saleID;
         public string SaleID

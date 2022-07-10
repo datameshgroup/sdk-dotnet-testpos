@@ -27,11 +27,11 @@ namespace SimplePOS
         private IFusionClient fusionClient;
 
         //File paths
-        private string settingsFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
-        private string appStateFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appstate.json");
-        private string mockDataFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mockdata.json");
-        private string paymentEventsPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PaymentEvents.csv");
-        private string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log.txt");
+        private readonly string settingsFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+        private readonly string appStateFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appstate.json");
+        private readonly string mockDataFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mockdata.json");
+        private readonly string paymentEventsPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PaymentEvents.csv");
+        private readonly string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log.txt");
 
         public Task Initialization { get; private set; }
 
@@ -245,6 +245,12 @@ namespace SimplePOS
             } while (settings.EnableVolumeTest);
         }
 
+        private void BtnPaymentCryptoDotCom_Click(object sender, RoutedEventArgs e)
+        {
+            return;
+        }
+        
+
 
         /// <summary>
         /// Displays a <see cref="PaymentUIResponse"/> and waits for user to acknowledge
@@ -407,6 +413,7 @@ namespace SimplePOS
                 bool waitingForResponse = true;
                 do
                 {
+                    // Request to RecvAsync() will either result in a response from the host, or an exception (timeout, network error etc)
                     switch (await fusionClient.RecvAsync())
                     {
                         case PaymentResponse r:
@@ -920,6 +927,29 @@ namespace SimplePOS
                 else
                 {
                     ShowPaymentDialog(paymentTypeName, "LOGOUT FAILED", r.Response.ErrorCondition.ToString(), r.Response.AdditionalResponse, LightBoxDialogType.Error, true, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowPaymentDialogFailed(paymentTypeName, null, ex.Message);
+            }
+        }
+
+        private async void BtnLogin_Click(object sender, RoutedEventArgs e)
+        {
+            string paymentTypeName = "LOGIN";
+            ShowPaymentDialog(paymentTypeName, "LOGIN IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
+
+            try
+            {
+                LoginResponse r = await fusionClient.SendRecvAsync<LoginResponse>(fusionClient.LoginRequest);
+                if (r.Response.Result != Result.Failure)
+                {
+                    ShowPaymentDialog(paymentTypeName, "LOGIN SUCCESS", "", "", LightBoxDialogType.Success, true, false);
+                }
+                else
+                {
+                    ShowPaymentDialog(paymentTypeName, "LOGIN FAILED", r.Response.ErrorCondition.ToString(), r.Response.AdditionalResponse, LightBoxDialogType.Error, true, false);
                 }
             }
             catch (Exception ex)
