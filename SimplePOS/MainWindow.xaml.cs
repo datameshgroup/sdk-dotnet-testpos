@@ -171,7 +171,8 @@ namespace SimplePOS
 
         private AppState LoadAppState()
         {
-            return (!File.Exists("appstate.json")) ? new AppState() : JsonConvert.DeserializeObject<AppState>(File.ReadAllText("appstate.json"));
+            string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appstate.json");
+            return (!File.Exists(filePath)) ? new AppState() : JsonConvert.DeserializeObject<AppState>(File.ReadAllText(filePath));
         }
 
         private void UpdateAppState(bool paymentInProgress, MessageHeader messageHeader = null)
@@ -238,6 +239,26 @@ namespace SimplePOS
             } while (settings.EnableVolumeTest);
         }
 
+        private async void BtnPaymentCryptoDotCom_Click(object sender, RoutedEventArgs e)
+        {
+            do
+            {
+                // Perform payment
+                DateTime dateTime = DateTime.Now;
+                long tc64 = Environment.TickCount64;
+                PaymentUIResponse paymentUIResponse = await DoPayment(PaymentBrand.CryptoDotCom);
+                tc64 = Environment.TickCount64 - tc64;
+
+                AppendPaymentEvent(DateTime.Now, "Payment", tc64, paymentUIResponse?.PaymentResponse?.Response.Success);
+
+                // Display if not in test mode
+                if (!settings.EnableVolumeTest)
+                {
+                    DisplayPaymentUIResponse(paymentUIResponse);
+                }
+            } while (settings.EnableVolumeTest);
+        }
+
 
         /// <summary>
         /// Displays a <see cref="PaymentUIResponse"/> and waits for user to acknowledge
@@ -264,7 +285,7 @@ namespace SimplePOS
         /// Perform a payment based on current app state and returns a response to display on the UI
         /// </summary>
         /// <returns></returns>
-        private async Task<PaymentUIResponse> DoPayment()
+        private async Task<PaymentUIResponse> DoPayment(PaymentBrand? paymentBrand = null)
         {
             // Validate input
             PaymentType paymentType;
@@ -306,6 +327,18 @@ namespace SimplePOS
                 requestedAmount: purchaseAmount,
                 paymentType: paymentType
                 );
+
+            // Allowed payment brand
+            if (paymentBrand.HasValue)
+            {
+                paymentRequest.PaymentTransaction.TransactionConditions = new TransactionConditions()
+                {
+                    AllowedPaymentBrands = new List<PaymentBrand>()
+                     {
+                         paymentBrand.Value
+                     }
+                };
+            }
 
             MockData mockData = LoadMockData();
 
