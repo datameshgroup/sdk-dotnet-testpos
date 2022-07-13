@@ -264,7 +264,7 @@ namespace SimplePOS
             }
             else if(!paymentUIResponse.Success)
             {
-                ShowPaymentDialogFailed(paymentUIResponse.PaymentType, paymentUIResponse.ErrorTitle, paymentUIResponse.ErrorText);
+                ShowPaymentDialogFailed(paymentUIResponse.PaymentType, paymentUIResponse.ErrorTitle, paymentUIResponse.ErrorText, paymentUIResponse.PaymentResponse);
             }
             else
             {
@@ -525,7 +525,7 @@ namespace SimplePOS
                     }
                     else
                     {
-                        ShowPaymentDialogFailed(caption, null, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse);
+                        ShowPaymentDialogFailed(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse, null, r.RepeatedMessageResponse?.RepeatedResponseMessageBody?.PaymentResponse);
                     }
                 }
                 // else if the transaction is still in progress, and we haven't reached out timeout
@@ -819,11 +819,8 @@ namespace SimplePOS
 
         private void ShowPaymentDialogSuccess(string caption, PaymentResponse paymentResponse)
         {
-            //ShowPaymentDialog(caption, "PAYMENT APPROVED", null, null, LightBoxDialogType.Success, true, false);
             PaymentResponse = paymentResponse;
             TxtReceipt.Text = paymentResponse.GetReceiptAsPlainText();
-
-            //WebBrowserReceipt.NavigateToString(paymentResponse.PaymentReceipt?.FirstOrDefault()?.OutputContent?.OutputXHTML ?? "");
 
             // Set caption
             LblPaymentCompleteCaption.Content = caption;
@@ -831,16 +828,34 @@ namespace SimplePOS
             LblPaymentCompleteTitle.Foreground = new SolidColorBrush(Colors.White);
             LblPaymentCompleteTitle.Content = "PAYMENT APPROVED";
 
-
+            // Show/hide views
             GridMain.Visibility = Visibility.Collapsed;
             PaymentDialogGrid.Visibility = Visibility.Collapsed;
             PaymentCompleteGrid.Visibility = Visibility.Visible;
-            //WebBrowserReceipt.Visibility = Visibility.Visible;
         }
 
-        private void ShowPaymentDialogFailed(string caption, string displayLine1 = null, string displayText = null)
+        private void ShowPaymentDialogFailed(string caption, string displayLine1 = null, string displayText = null, PaymentResponse paymentResponse = null)
         {
-            ShowPaymentDialog(caption, "PAYMENT DECLINED", displayLine1, displayText, LightBoxDialogType.Error, true, false);
+            if(paymentResponse == null)
+            {
+                ShowPaymentDialog(caption, "PAYMENT DECLINED", displayLine1, displayText, LightBoxDialogType.Error, true, false);
+                return;
+            }
+
+            PaymentResponse = paymentResponse;
+            TxtReceipt.Text = paymentResponse.GetReceiptAsPlainText();
+
+            // Set caption
+            LblPaymentCompleteCaption.Content = caption;
+            BorderPaymentCompleteTitle.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xA2, 0x00, 0x25));
+            LblPaymentCompleteTitle.Foreground = new SolidColorBrush(Colors.White);
+            LblPaymentCompleteTitle.Content = "PAYMENT DECLINED";
+
+            // Show/hide views
+            GridMain.Visibility = Visibility.Collapsed;
+            PaymentDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentCompleteGrid.Visibility = Visibility.Visible;
+
         }
 
         private void ShowPaymentDialog(string caption, string title, string displayLine1, string displayText, LightBoxDialogType lightBoxDialogType, bool enableOk, bool enableCancel)
