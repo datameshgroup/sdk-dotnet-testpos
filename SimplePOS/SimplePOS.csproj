@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DataMeshGroup.Fusion.FusionClient" Version="1.2.5" />
+    <PackageReference Include="DataMeshGroup.Fusion.FusionClient" Version="1.2.6" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
