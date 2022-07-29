@@ -121,17 +121,17 @@ namespace SimplePOS
 
         private void FusionClient_OnConnectError(object sender, EventArgs e)
         {
-            AppendPaymentEvent(DateTime.Now, "SocketConnectError");
+            AppendPaymentEvent(DateTime.Now, "SocketConnectError", 0, true);
         }
 
         private void FusionClient_OnDisconnect(object sender, EventArgs e)
         {
-            AppendPaymentEvent(DateTime.Now, "SocketDisconnect");
+            AppendPaymentEvent(DateTime.Now, "SocketDisconnect", 0, true);
         }
 
         private void FusionClient_OnConnect(object sender, EventArgs e)
         {
-            AppendPaymentEvent(DateTime.Now, "SocketConnect");
+            AppendPaymentEvent(DateTime.Now, "SocketConnect", 0, true);
         }
 
         private void FusionClient_OnLog(object sender, LogEventArgs e)
