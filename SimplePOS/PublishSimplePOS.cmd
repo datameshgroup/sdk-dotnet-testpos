@@ -1,0 +1,1 @@
+dotnet publish SimplePOS.csproj --configuration Release --runtime win-x86 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true
