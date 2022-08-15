@@ -320,16 +320,28 @@ namespace SimplePOS
                 paymentType: paymentType
                 );
 
-            MockData mockData = LoadMockData();
-
-            if ((mockData.SaleItems != null) && (mockData.SaleItems.Count > 0))
+            bool isMockDataLoaded = false;
+            try
             {
-                foreach (SaleItem saleItem in mockData.SaleItems)
+                MockData mockData = LoadMockData();
+
+                if ((mockData.SaleItems != null) && (mockData.SaleItems.Count > 0))
                 {
-                    paymentRequest.AddSaleItem(productCode: saleItem.ProductCode, productLabel: saleItem.ProductLabel, itemAmount: saleItem.ItemAmount, category: saleItem.Category, subCategory: saleItem.SubCategory);
+                    foreach (SaleItem saleItem in mockData.SaleItems)
+                    {
+                        paymentRequest.AddSaleItem(productCode: saleItem.ProductCode, productLabel: saleItem.ProductLabel, itemAmount: saleItem.ItemAmount, category: saleItem.Category, subCategory: saleItem.SubCategory);
+                    }
                 }
+
+                isMockDataLoaded = true;
+            } 
+            catch(Exception ex)
+            {
+           
+                File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - Unable to load Mock Data: {ex?.Message ?? ""}{Environment.NewLine}");
             }
-            else
+
+            if(!isMockDataLoaded)
             {
                 // Create sale item
                 SaleItem parentItem = paymentRequest.AddSaleItem(
