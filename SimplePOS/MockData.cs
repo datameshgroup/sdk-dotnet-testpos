@@ -22,7 +22,7 @@ namespace SimplePOS
                 {
                     foreach (PaymentSaleItem item in value)
                     {
-                        SaleItems.Add(new SaleItem() { ProductCode = item.ProductCode, ProductLabel = item.ProductLabel, ItemAmount = item.ItemAmount });
+                        SaleItems.Add(new SaleItem() { ProductCode = item.ProductCode, ProductLabel = item.ProductLabel, ItemAmount = item.ItemAmount, Category = item.Category, SubCategory = item.SubCategory });
                     }
                 }
             }  
@@ -33,6 +33,8 @@ namespace SimplePOS
             public string ProductCode;
             public string ProductLabel;
             public decimal ItemAmount;
+            public string Category;
+            public string SubCategory;
         }
     }
 
