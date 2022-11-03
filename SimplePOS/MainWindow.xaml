@@ -285,6 +285,10 @@
                             <Label Content="Request Card Token"/>
                             <CheckBox x:Name="ChkRequestToken"/>
                         </WrapPanel>
+                        <WrapPanel>
+                            <Label Content="DMG Test Case ID"/>
+                            <TextBox x:Name="TxtDMGTestCaseID" Text=""/>
+                        </WrapPanel>
                         <!--<WrapPanel>
                             <Label Content="MaximumCashBack Amt"/>
                             <TextBox x:Name="TxtMaximumCashBackAmount" Text=""/>

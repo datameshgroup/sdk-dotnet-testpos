@@ -392,6 +392,12 @@ namespace SimplePOS
                 //    );
             }
 
+            string testCaseID = TxtDMGTestCaseID.Text;
+            if (!string.IsNullOrEmpty(testCaseID))
+            {
+                paymentRequest.AddSaleItem(productCode: testCaseID, productLabel: testCaseID, itemAmount: 0);
+            }
+
             // Add extra fields
             paymentRequest.PaymentTransaction.AmountsReq.CashBackAmount = cashoutAmount;
             paymentRequest.SaleData.TokenRequestedType = requestCardToken ? TokenRequestedType.Customer : null;
