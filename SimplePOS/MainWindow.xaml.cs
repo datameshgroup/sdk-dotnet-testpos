@@ -331,9 +331,8 @@ namespace SimplePOS
                     {
                         paymentRequest.AddSaleItem(productCode: saleItem.ProductCode, productLabel: saleItem.ProductLabel, itemAmount: saleItem.ItemAmount, category: saleItem.Category, subCategory: saleItem.SubCategory);
                     }
-                }
-
-                isMockDataLoaded = true;
+                    isMockDataLoaded = true;
+                }                
             } 
             catch(Exception ex)
             {
