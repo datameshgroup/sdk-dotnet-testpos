@@ -340,13 +340,14 @@ namespace SimplePOS
                 File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - Unable to load Mock Data: {ex?.Message ?? ""}{Environment.NewLine}");
             }
 
-            if(!isMockDataLoaded)
+            if (!isMockDataLoaded)
             {
+                decimal quarterAmount = purchaseAmount / 4;
                 // Create sale item
                 SaleItem parentItem = paymentRequest.AddSaleItem(
                     productCode: "XXVH776",
                     productLabel: "Big Kahuna Burger",
-                    itemAmount: purchaseAmount,
+                    itemAmount: quarterAmount * 3,
                     category: "food",
                     subCategory: "mains"
                     );
@@ -360,13 +361,22 @@ namespace SimplePOS
                        subCategory: "mains"
                        );
                 paymentRequest.AddSaleItem(
-                    productCode: "XXVH776-1",
+                        productCode: "XXVH776-1",
+                        productLabel: "Extra sauce",
+                        parentItemID: parentItem.ItemID,
+                        itemAmount: 0,
+                        category: "food",
+                        subCategory: "sides"
+                );
+                paymentRequest.AddSaleItem(
+                    productCode: "XXVH776-2",
                    productLabel: "Side of fries",
                    parentItemID: parentItem.ItemID,
-                   itemAmount: 0,
+                   quantity: 1,
+                   unitPrice: quarterAmount,
                    category: "food",
                    subCategory: "sides"
-                   );
+                   );                
                 // Full sale item
                 //paymentRequest.AddSaleItem(
                 //    productCode: "AB54447",
