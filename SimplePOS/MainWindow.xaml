@@ -469,6 +469,14 @@
                                     <Label Content="Card token"/>
                                     <TextBox Text="{Binding PaymentResponse.PaymentResult.PaymentInstrumentData.CardData.PaymentToken.TokenValue, Mode=OneWay}"/>
                                 </WrapPanel>
+                                <WrapPanel>
+                                    <Label Content="Error Condition"/>
+                                    <TextBox Text="{Binding PaymentResponse.Response.ErrorCondition, Mode=OneWay}"/>
+                                </WrapPanel>
+                                <WrapPanel>
+                                    <Label Content="Additional Response"/>
+                                    <TextBox Text="{Binding PaymentResponse.Response.AdditionalResponse, Mode=OneWay}" TextWrapping="Wrap"/>
+                                </WrapPanel>
                             </StackPanel>
                         </ScrollViewer>
 
