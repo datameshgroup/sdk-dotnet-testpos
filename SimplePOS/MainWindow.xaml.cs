@@ -347,6 +347,8 @@ namespace SimplePOS
                 SaleItem parentItem = paymentRequest.AddSaleItem(
                     productCode: "XXVH776",
                     productLabel: "Big Kahuna Burger",
+                    quantity: 3,
+                    unitPrice: quarterAmount,
                     itemAmount: quarterAmount * 3,
                     category: "food",
                     subCategory: "mains"
@@ -370,10 +372,11 @@ namespace SimplePOS
                 );
                 paymentRequest.AddSaleItem(
                     productCode: "XXVH776-2",
-                   productLabel: "Side of fries",
+                   productLabel: "Side of fries (Large)",
                    parentItemID: parentItem.ItemID,
                    quantity: 1,
                    unitPrice: quarterAmount,
+                   itemAmount: quarterAmount,
                    category: "food",
                    subCategory: "sides"
                    );                
