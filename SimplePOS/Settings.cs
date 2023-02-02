@@ -208,9 +208,61 @@ namespace SimplePOS
             }
         }
 
-        
+        private int transactionProcessingTimeSecs = 300;
+        public int TransactionProcessingTimeSecs 
+        { 
+            get => transactionProcessingTimeSecs;
+            set
+            {
+                if(value != transactionProcessingTimeSecs) 
+                { 
+                    transactionProcessingTimeSecs = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
 
+        private int transactionResponseTimeoutSecs = 60;
+        public int TransactionResponseTimeoutSecs
+        {
+            get => transactionResponseTimeoutSecs;
+            set
+            {
+                if(value != transactionResponseTimeoutSecs) 
+                { 
+                    transactionResponseTimeoutSecs = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
 
+        private int recoveryProcessingTimeSecs = 90;
+        public int RecoveryProcessingTimeSecs
+        {
+            get => recoveryProcessingTimeSecs;
+            set
+            {
+                if (value != recoveryProcessingTimeSecs)
+                {
+                    recoveryProcessingTimeSecs = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        private int betweenStatusCheckTimeSecs = 10;
+        public int BetweenStatusCheckTimeSecs
+        {
+            get => betweenStatusCheckTimeSecs;
+            set
+            {
+                if (value != betweenStatusCheckTimeSecs)
+                {
+                    betweenStatusCheckTimeSecs = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
 
         #region INotifyPropertyChanged
         public event PropertyChangedEventHandler PropertyChanged;

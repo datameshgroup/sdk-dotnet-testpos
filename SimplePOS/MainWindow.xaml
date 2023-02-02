@@ -181,6 +181,23 @@
                         <Label Content="Certification Code"/>
                         <TextBox x:Name="TxtCertificationCode" Text="{Binding Settings.CertificationCode, Mode=TwoWay}"/>
                     </WrapPanel>
+                    <Label Content="Timeouts (in Seconds)" Style="{StaticResource SubTitleLabel}"/>
+                    <WrapPanel>
+                        <Label Content="Txn Payment Processing"/>
+                        <TextBox x:Name="TxtTProcessingTimeout" Text="{Binding Settings.TransactionProcessingTimeSecs, Mode=TwoWay}"/>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="Txn Response Processing"/>
+                        <TextBox x:Name="TxtResponseTimeout" Text="{Binding Settings.TransactionResponseTimeoutSecs, Mode=TwoWay}"/>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="Recovery Processing"/>
+                        <TextBox x:Name="TxtRProcessingTimeout" Text="{Binding Settings.RecoveryProcessingTimeSecs, Mode=TwoWay}"/>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Label Content="Before Next Txn Status"/>
+                        <TextBox x:Name="TxtBetweenStatusTimeout" Text="{Binding Settings.BetweenStatusCheckTimeSecs, Mode=TwoWay}"/>
+                    </WrapPanel>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Margin="16,0,0,0">

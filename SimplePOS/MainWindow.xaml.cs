@@ -136,7 +136,7 @@ namespace SimplePOS
 
         private void FusionClient_OnLog(object sender, LogEventArgs e)
         {
-            File.AppendAllText(logPath, $"{e.CreatedDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff")} - {e.LogLevel.ToString().PadRight(12, ' ')} - {e.Data} {e.Exception?.Message ?? ""}{Environment.NewLine}");
+            File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - {e.LogLevel.ToString().PadRight(12, ' ')} - {e.Data} {e.Exception?.Message ?? ""}{Environment.NewLine}");
         }
 
         /// <summary>
@@ -432,19 +432,32 @@ namespace SimplePOS
             //    };
             //}
 
+            bool checkTimer = false;
 
+            int transactionProcessingTime = Settings.TransactionProcessingTimeSecs;
+            int transactionResponseTimeout = Settings.TransactionResponseTimeoutSecs * 1000; //convert to milliseconds
+
+            TimeSpan transactionTimeout = TimeSpan.FromSeconds(transactionProcessingTime);
+            System.Diagnostics.Stopwatch timeoutTimer = new System.Diagnostics.Stopwatch();
+            if (transactionProcessingTime > 0)
+            {
+                checkTimer = true;
+                timeoutTimer.Start();
+            }
 
             // Check environment 
             PaymentUIResponse paymentUIResponse = new PaymentUIResponse();
+            SaleToPOIMessage saleToPoiRequest = null;
             try
             {
-                SaleToPOIMessage saleToPoiRequest = await fusionClient.SendAsync(paymentRequest);
+                saleToPoiRequest = await fusionClient.SendAsync(paymentRequest);
                 UpdateAppState(true, saleToPoiRequest.MessageHeader);
                 bool waitingForResponse = true;
                 do
                 {
+                    MessagePayload messagePayload = await fusionClient.RecvAsync(new System.Threading.CancellationTokenSource(transactionResponseTimeout).Token);
                     // Request to RecvAsync() will either result in a response from the host, or an exception (timeout, network error etc)
-                    switch (await fusionClient.RecvAsync())
+                    switch (messagePayload)                    
                     {
                         case PaymentResponse r:
                             UpdateAppState(false);
@@ -470,13 +483,27 @@ namespace SimplePOS
                             // Ignore unexpected result
                             break;
                     }
-
+                    if (waitingForResponse && checkTimer && (timeoutTimer.Elapsed > transactionTimeout))
+                    {
+                        File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Transaction timeout.{Environment.NewLine}");
+                        waitingForResponse = false;
+                        timeoutTimer.Stop();                        
+                        if (saleToPoiRequest == null)
+                        {
+                            paymentUIResponse.ErrorText = "TRANSACTION TIMEOUT";
+                        }
+                        else
+                        {
+                            paymentUIResponse = await PerformErrorRecovery();
+                        }
+                    }
                 }
                 while (waitingForResponse);
             }
             catch (FusionException fe)
             {
-                if (fe.ErrorRecoveryRequired)
+                File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - FusionException: {fe?.Message ?? ""}. Error recovery required: {fe.ErrorRecoveryRequired}{Environment.NewLine}");
+                if (fe.ErrorRecoveryRequired && (saleToPoiRequest != null))
                 {
                     paymentUIResponse = await PerformErrorRecovery();
                 }
@@ -487,6 +514,7 @@ namespace SimplePOS
             }
             catch (Exception ex)
             {
+                File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - Exception: {ex?.Message ?? ""}{Environment.NewLine}");
                 paymentUIResponse.ErrorTitle = "UNKNOWN ERROR";
                 paymentUIResponse.ErrorText = ex.Message;
             }
@@ -721,8 +749,8 @@ namespace SimplePOS
             string title = "PAYMENT RECOVERY IN PROGRESS";
             ShowPaymentDialog(caption, title, null, null, LightBoxDialogType.Normal, false, true);
 
-            TimeSpan timeout = TimeSpan.FromSeconds(90);
-            TimeSpan requestDelay = TimeSpan.FromSeconds(10);
+            TimeSpan timeout = TimeSpan.FromSeconds(Settings.RecoveryProcessingTimeSecs);
+            TimeSpan requestDelay = TimeSpan.FromSeconds(Settings.BetweenStatusCheckTimeSecs);
             Stopwatch timeoutTimer = new Stopwatch();
             timeoutTimer.Start();
 
@@ -757,10 +785,19 @@ namespace SimplePOS
 
                         errorRecoveryInProgress = false;
                     }
-                    // else if the transaction is still in progress, and we haven't reached out timeout
-                    else if (r.Response.ErrorCondition == ErrorCondition.InProgress && timeoutTimer.Elapsed < timeout)
+                    // else if the transaction is still in progress
+                    else if (r.Response.ErrorCondition == ErrorCondition.InProgress)
                     {
-                        ShowPaymentDialog(caption, title, "PAYMENT IN PROGRESS", "", LightBoxDialogType.Normal, false, true);
+                        //check if we haven't reached out timeout
+                        if (timeoutTimer.Elapsed < timeout)
+                        {
+                            ShowPaymentDialog(caption, title, "PAYMENT IN PROGRESS", "", LightBoxDialogType.Normal, false, true);
+                        }
+                        else
+                        {
+                            paymentUIResponse.ErrorText = "PAYMENT RECOVERY TIMEOUT - PLEASE CHECK PINPAD";
+                            errorRecoveryInProgress = false;
+                        }
                     }
                     // otherwise, fail
                     else
