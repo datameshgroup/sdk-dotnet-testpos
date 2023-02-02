@@ -639,7 +639,7 @@ namespace SimplePOS
                 {
                     _ = await fusionClient.SendAsync(abortRequest);
                 }
-                catch(FusionException fe)
+                catch(FusionException)
                 {
                     // Throws FusionException when Internet is down
                 }
