@@ -8,9 +8,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace SimplePOS
@@ -25,6 +27,7 @@ namespace SimplePOS
         private readonly AppState appState;
         private Settings settings;
         private IFusionClient fusionClient;
+        private bool useFirstTerminalSettings = true;
 
         //File paths
         private readonly string settingsFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
@@ -65,18 +68,22 @@ namespace SimplePOS
         public MainWindow()
         {
             DataContext = this;
-            InitializeComponent();
-
-            NavigateToMainPage();
+            InitializeComponent();            
 
             Settings = LoadSettings();
             appState = LoadAppState();
+
+            UpdateTerminalSettings(true);
+
+            NavigateToMainPage();
 
             Initialization = InitializeAsync();
         }
 
         public async Task InitializeAsync()
         {
+            useFirstTerminalSettings = appState.UseFirstTerminalSettings;
+
             await CreateFusionClient();
 
             if (appState?.PaymentInProgress == true)
@@ -103,11 +110,22 @@ namespace SimplePOS
                 fusionClient = null;
             }
 
+            string saleID = Settings.SaleID;
+            string poiID = Settings.POIID;
+            string kek = Settings.KEK;
+
+            if (!useFirstTerminalSettings && doesTerminal2SettingsExist())
+            {
+                saleID = Settings.SaleID2;
+                poiID = Settings.POIID2;
+                kek = Settings.KEK2;
+            }
+
             fusionClient = new FusionClient(Settings.UseTestEnvironment)
             {
-                SaleID = Settings.SaleID,
-                POIID = Settings.POIID,
-                KEK = Settings.KEK,
+                SaleID = saleID,
+                POIID = poiID,
+                KEK = kek,
                 CustomURL = Settings.CustomNexoURL,
                 LogLevel = DataMeshGroup.Fusion.LogLevel.Trace,
                 LoginRequest = BuildLoginRequest()
@@ -117,6 +135,13 @@ namespace SimplePOS
             fusionClient.OnConnect += FusionClient_OnConnect;
             fusionClient.OnDisconnect += FusionClient_OnDisconnect;
             fusionClient.OnConnectError += FusionClient_OnConnectError;
+        }
+
+        private bool doesTerminal2SettingsExist()
+        {
+            return !String.IsNullOrEmpty(Settings.SaleID2) &&
+                !String.IsNullOrEmpty(Settings.POIID2) &&
+                !String.IsNullOrEmpty(Settings.KEK2);
         }
 
         private void FusionClient_OnConnectError(object sender, EventArgs e)
@@ -164,6 +189,9 @@ namespace SimplePOS
                     SaleID = "",
                     POIID = "",
                     KEK = "",
+                    SaleID2 = "",
+                    POIID2 = "",
+                    KEK2 = "",
                     ProviderIdentification = "Company A",
                     ApplicationName = "POS Retail",
                     SoftwareVersion = "01.00.00",
@@ -183,6 +211,7 @@ namespace SimplePOS
 
         private void UpdateAppState(bool paymentInProgress, MessageHeader messageHeader = null)
         {
+            appState.UseFirstTerminalSettings = useFirstTerminalSettings;
             appState.PaymentInProgress = paymentInProgress;
             appState.MessageHeader = messageHeader ?? appState.MessageHeader;
 
@@ -208,6 +237,14 @@ namespace SimplePOS
 
         private void NavigateToMainPage()
         {
+            if (doesTerminal2SettingsExist()){
+                BtnPaymentTerminal1.Content = "EFT(" + Settings.POIID + ")";
+                BtnPaymentTerminal2.Content = "EFT(" + Settings.POIID2 + ")";
+                BtnPaymentTerminal2.Visibility = Visibility.Visible;                
+            } else {
+                BtnPaymentTerminal1.Content = "EFT";
+                BtnPaymentTerminal2.Visibility = Visibility.Collapsed;                
+            }
             GridSettings.Visibility = Visibility.Collapsed;
             GridMain.Visibility = Visibility.Visible;
         }
@@ -215,9 +252,35 @@ namespace SimplePOS
 
         private async void BtnSaveSettings_Click(object sender, RoutedEventArgs e)
         {
+            UpdateTerminalSettings();
             File.WriteAllText(settingsFilePath, System.Text.Json.JsonSerializer.Serialize<Settings>(Settings));
             await CreateFusionClient();
             NavigateToMainPage();
+        }
+
+        private void UpdateTerminalSettings(bool updateAppMode = false)
+        {       
+            //If only the Terminal 2 Settings were set, place the settings to the first terminal instead.            
+            if(String.IsNullOrEmpty(Settings.SaleID)  &&
+                String.IsNullOrEmpty(Settings.POIID) &&
+                String.IsNullOrEmpty(Settings.KEK) && 
+                doesTerminal2SettingsExist())
+            {
+                Settings.SaleID = (new StringBuilder(Settings.SaleID2)).ToString();
+                Settings.POIID = (new StringBuilder(Settings.POIID2)).ToString();
+                Settings.KEK = (new StringBuilder(Settings.KEK2)).ToString();
+
+                Settings.SaleID2 = string.Empty;
+                Settings.POIID2 = string.Empty;
+                Settings.KEK2 = string.Empty;
+
+                useFirstTerminalSettings = true;
+
+                if (updateAppMode)
+                {
+                    appState.UseFirstTerminalSettings = true;
+                }
+            }
         }
 
         private void BtnViewSettings_Click(object sender, RoutedEventArgs e)
@@ -227,6 +290,10 @@ namespace SimplePOS
 
         private async void BtnPayment_Click(object sender, RoutedEventArgs e)
         {
+            if (!useFirstTerminalSettings){
+                useFirstTerminalSettings = true;
+                await CreateFusionClient();                
+            }            
             do
             {
                 // Perform payment
@@ -245,13 +312,36 @@ namespace SimplePOS
             } while (settings.EnableVolumeTest);
         }
 
+        private async void BtnPaymentTerminal2_Click(object sender, RoutedEventArgs e)
+        {
+            if (useFirstTerminalSettings)
+            {
+                useFirstTerminalSettings = false;
+                await CreateFusionClient();                
+            }
+            do
+            {
+                // Perform payment
+                DateTime dateTime = DateTime.Now;
+                long tc64 = Environment.TickCount64;
+                PaymentUIResponse paymentUIResponse = await DoPayment();
+                tc64 = Environment.TickCount64 - tc64;
+
+                AppendPaymentEvent(DateTime.Now, "Payment", tc64, paymentUIResponse?.PaymentResponse?.Response.Success);
+
+                // Display if not in test mode
+                if (!settings.EnableVolumeTest)
+                {
+                    DisplayPaymentUIResponse(paymentUIResponse);
+                }
+            } while (settings.EnableVolumeTest);
+        }
+
         private void BtnPaymentCryptoDotCom_Click(object sender, RoutedEventArgs e)
         {
             return;
         }
         
-
-
         /// <summary>
         /// Displays a <see cref="PaymentUIResponse"/> and waits for user to acknowledge
         /// </summary>
@@ -271,7 +361,6 @@ namespace SimplePOS
                 ShowPaymentDialogSuccess(paymentUIResponse.PaymentType, paymentUIResponse.PaymentResponse);
             }
         }
-
 
         /// <summary>
         /// Perform a payment based on current app state and returns a response to display on the UI
@@ -521,7 +610,6 @@ namespace SimplePOS
 
             return paymentUIResponse;
         }
-
 
         private async void BtnReconciliation_Click(object sender, RoutedEventArgs e)
         {
