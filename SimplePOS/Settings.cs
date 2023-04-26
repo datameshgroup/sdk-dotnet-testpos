@@ -305,6 +305,20 @@ namespace SimplePOS
             }
         }
 
+        private bool displayAdvanceSettings = false;
+        public bool DisplayAdvanceSettings
+        {
+            get => displayAdvanceSettings;
+            set
+            {
+                if (value != displayAdvanceSettings)
+                {
+                    displayAdvanceSettings = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
         #region INotifyPropertyChanged
         public event PropertyChangedEventHandler PropertyChanged;
 

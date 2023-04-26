@@ -28,6 +28,7 @@ namespace SimplePOS
         private Settings settings;
         private IFusionClient fusionClient;
         private bool useFirstTerminalSettings = true;
+        private bool? displayAdvanceSettings = null;
 
         //File paths
         private readonly string settingsFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
@@ -75,6 +76,8 @@ namespace SimplePOS
 
             UpdateTerminalSettings(true);
 
+            UpdateAdvanceSettingsVisibility();
+
             NavigateToMainPage();
 
             Initialization = InitializeAsync();
@@ -82,7 +85,7 @@ namespace SimplePOS
 
         public async Task InitializeAsync()
         {
-            useFirstTerminalSettings = appState.UseFirstTerminalSettings;
+            useFirstTerminalSettings = appState.UseFirstTerminalSettings;                        
 
             await CreateFusionClient();
 
@@ -218,6 +221,34 @@ namespace SimplePOS
             File.WriteAllText(appStateFilePath, JsonConvert.SerializeObject(appState));
         }
 
+        private void UpdateAdvanceSettingsVisibility()
+        {
+            if((displayAdvanceSettings != null) && (displayAdvanceSettings == settings.DisplayAdvanceSettings)){
+                return;
+            }
+
+            if (settings.DisplayAdvanceSettings)
+            {
+                BtnLastTxnStatus.Visibility = Visibility.Collapsed;
+
+                TxtServiceID.Text = string.Empty;
+                WPanelServiceID.Visibility = Visibility.Visible;                
+
+                TxtMessageReferenceServiceID.Text = string.Empty;
+                SPanelTxnStatus.Visibility = Visibility.Visible;
+
+                TxtDMGTestCaseID.Text = string.Empty;
+                WPanelDMGTestCaseID.Visibility = Visibility.Visible;
+            } else {
+                BtnLastTxnStatus.Visibility = Visibility.Visible;
+                WPanelServiceID.Visibility = Visibility.Collapsed;
+                WPanelDMGTestCaseID.Visibility = Visibility.Collapsed;
+                SPanelTxnStatus.Visibility = Visibility.Collapsed;                
+            }
+
+            displayAdvanceSettings = settings.DisplayAdvanceSettings;
+        }
+
         private MockData LoadMockData()
         {
             if (!File.Exists(mockDataFilePath))
@@ -253,6 +284,7 @@ namespace SimplePOS
         private async void BtnSaveSettings_Click(object sender, RoutedEventArgs e)
         {
             UpdateTerminalSettings();
+            UpdateAdvanceSettingsVisibility();
             File.WriteAllText(settingsFilePath, System.Text.Json.JsonSerializer.Serialize<Settings>(Settings));
             await CreateFusionClient();
             NavigateToMainPage();
@@ -493,10 +525,20 @@ namespace SimplePOS
                 //    );
             }
 
-            string testCaseID = TxtDMGTestCaseID.Text;
-            if (!string.IsNullOrEmpty(testCaseID))
+            string paymentServiceID = null;
+
+            if (displayAdvanceSettings == true)
             {
-                paymentRequest.AddSaleItem(productCode: testCaseID, productLabel: testCaseID, itemAmount: 0);
+                string testCaseID = TxtDMGTestCaseID.Text;
+                if (!string.IsNullOrEmpty(testCaseID))
+                {
+                    paymentRequest.AddSaleItem(productCode: testCaseID, productLabel: testCaseID, itemAmount: 0);
+                }            
+                
+                if(!string.IsNullOrEmpty(TxtServiceID.Text))
+                {
+                    paymentServiceID = TxtServiceID.Text;
+                }
             }
 
             // Add extra fields
@@ -539,7 +581,12 @@ namespace SimplePOS
             SaleToPOIMessage saleToPoiRequest = null;
             try
             {
-                saleToPoiRequest = await fusionClient.SendAsync(paymentRequest);
+                if(string.IsNullOrEmpty(paymentServiceID)) {
+                    saleToPoiRequest = await fusionClient.SendAsync(paymentRequest);
+                } else {
+                    saleToPoiRequest = await fusionClient.SendAsync(paymentRequest, paymentServiceID);
+                }
+                
                 UpdateAppState(true, saleToPoiRequest.MessageHeader);
                 bool waitingForResponse = true;
                 do
@@ -635,26 +682,46 @@ namespace SimplePOS
             }
         }
 
-        private async void BtnLastTxnStatus_Click(object sender, RoutedEventArgs e)
+        private void BtnTxnStatus_Click(object sender, RoutedEventArgs e)
+        {                  
+            MessageCategory messageCategory;            
+            switch (CboTxnStatusType.SelectedIndex)
+            {
+                case 0:
+                    messageCategory = appState?.MessageHeader?.MessageCategory ?? MessageCategory.Payment;
+                    break;
+                default:
+                    messageCategory = MessageCategory.Reversal;                    
+                    break;
+            }
+
+            string messageReferenceServiceID = TxtMessageReferenceServiceID.Text;
+            if (string.IsNullOrEmpty(messageReferenceServiceID))
+            {
+                messageReferenceServiceID = appState?.MessageHeader?.ServiceID;
+            }
+
+            processTransactionStatus(messageCategory, messageReferenceServiceID);
+        }
+
+        private void BtnLastTxnStatus_Click(object sender, RoutedEventArgs e)
+        {
+            processTransactionStatus(appState?.MessageHeader?.MessageCategory ?? MessageCategory.Payment, appState?.MessageHeader?.ServiceID);
+        }
+
+        private async void processTransactionStatus(MessageCategory messageCategory, String messageReferenceServiceID)
         {
             string caption = "LAST TRANSACTION STATUS";
             string title = "NO LAST TRANSACTION";
-
-            // Exit if we don't have anything to recover
-            //if (appState is null || appState.MessageHeader is null)
-            //{
-            //    ShowPaymentDialog(caption, title, null, null, LightBoxDialogType.Normal, true, false);
-            //    return;
-            //}
 
             var transactionStatusRequest = new TransactionStatusRequest()
             {
                 MessageReference = new MessageReference()
                 {
-                    MessageCategory = appState?.MessageHeader?.MessageCategory ?? MessageCategory.Payment,
+                    MessageCategory = messageCategory,
                     POIID = appState?.MessageHeader?.POIID,
                     SaleID = appState?.MessageHeader?.SaleID,
-                    ServiceID = appState?.MessageHeader?.ServiceID
+                    ServiceID = messageReferenceServiceID
                 }
             };
 
@@ -976,6 +1043,11 @@ namespace SimplePOS
         {
             PaymentResponse = paymentResponse;
             TxtReceipt.Text = paymentResponse.GetReceiptAsPlainText();
+            String cashierReceipt = paymentResponse.GetReceiptAsPlainText(DocumentQualifier.CashierReceipt);
+            if(!String.IsNullOrEmpty(cashierReceipt))
+            {
+                TxtReceipt.Text += "\n----------------\n" + cashierReceipt;
+            }
 
             // Set caption
             LblPaymentCompleteCaption.Content = caption;
@@ -999,6 +1071,11 @@ namespace SimplePOS
 
             PaymentResponse = paymentResponse;
             TxtReceipt.Text = paymentResponse.GetReceiptAsPlainText();
+            String cashierReceipt = paymentResponse.GetReceiptAsPlainText(DocumentQualifier.CashierReceipt);
+            if (!String.IsNullOrEmpty(cashierReceipt))
+            {
+                TxtReceipt.Text += "\n----------------\n" + cashierReceipt;
+            }
 
             // Set caption
             LblPaymentCompleteCaption.Content = caption;
