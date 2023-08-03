@@ -36,7 +36,7 @@ jobs:
         run: dotnet build -c release
         
       - name: Publish
-        run: dotnet publish -c Release -r win-x86 -o ${{ env.OutputDirectory }} --self-contained true
+        run: dotnet publish SimplePOS\SimplePOS.csproj -c release -r win-x86 -f net6.0-windows -p:PublishSingleFile=true --self-contained true -o ${{ env.OutputDirectory }}
         
       - name: Upload artifact
         uses: actions/upload-artifact@v3
