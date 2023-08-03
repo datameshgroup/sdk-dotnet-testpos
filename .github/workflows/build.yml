@@ -36,7 +36,7 @@ jobs:
         run: dotnet build -c release
         
       - name: Publish
-        run: dotnet publish -c Release -a win-x86 -r win-x86 -o ${{ env.OutputDirectory }} --self-contained true
+        run: dotnet publish -c Release -r win-x86 -o ${{ env.OutputDirectory }} --self-contained true
         
       - name: Upload artifact
         uses: actions/upload-artifact@v3
