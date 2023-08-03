@@ -1,0 +1,45 @@
+name: build-and-nuget-publish
+
+on:  
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "*" ]
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+  OutputDirectory: ${{github.workspace}}/buildoutput
+
+defaults:
+  run:
+    shell: pwsh
+    
+
+jobs:  
+  build:    
+    runs-on: windows-latest  
+
+    steps:      
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Get all history to allow automatic versioning using MinVer
+
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 6.x
+     
+      - name: Restore dependencies
+        run: dotnet restore
+        
+      - name: Build
+        run: dotnet build -c release
+        
+      - name: Publish
+        run: dotnet publish -c Release -a win-x86 -r win-x86 -o ${{ env.OutputDirectory }} --self-contained true
+        
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: output
+          path: ${{ env.OutputDirectory }}     
