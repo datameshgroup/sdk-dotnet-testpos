@@ -1,11 +1,12 @@
-name: build-and-nuget-publish
+#git tag -a v1.4.2 -m "SimplePOS v1.4.2"
 
-on:  
+name: create-release
+
+on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "*" ]
-
+    tags:
+      - "v*"
+	  
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   DOTNET_NOLOGO: true
@@ -38,8 +39,19 @@ jobs:
       - name: Publish
         run: dotnet publish SimplePOS\SimplePOS.csproj -c release -r win-x86 -f net6.0-windows -p:PublishSingleFile=true --self-contained true -o ${{ env.OutputDirectory }}
         
+      - uses: vimtor/action-zip@v1
+        with:
+          files: ${{ env.OutputDirectory }}
+          dest: ${{ env.OutputDirectory }}/SimplePOS-${{  github.ref_name }}.zip
+        
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: output
-          path: ${{ env.OutputDirectory }}      
+          name: release
+          path: ${{ env.OutputDirectory }}/SimplePOS-${{  github.ref_name }}.zip
+          
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: '${{ env.OutputDirectory }}/SimplePOS-${{  github.ref_name }}.zip'
+          generateReleaseNotes: true
+          prerelease: true
