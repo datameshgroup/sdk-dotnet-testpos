@@ -50,6 +50,7 @@ jobs:
           name: release
           path: ${{ env.OutputDirectory }}/SimplePOS-${{  github.ref_name }}.zip
           
+      - name: Release
         uses: ncipollo/release-action@v1
         with:
           artifacts: '${{ env.OutputDirectory }}/SimplePOS-${{  github.ref_name }}.zip'
