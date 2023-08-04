@@ -1,7 +1,6 @@
-#git tag -m "v1.4.2"
-
 name: create-release
 
+# Runs when a tag is added in the format v*
 on:
   push:
     tags:
@@ -12,45 +11,53 @@ env:
   DOTNET_NOLOGO: true
   OutputDirectory: ${{github.workspace}}\buildoutput
 
+
 defaults:
   run:
-    shell: pwsh
+    shell: pwsh # default shell is powershell
     
 
 jobs:  
   build:    
     runs-on: windows-latest  
 
-    steps:      
+    steps:  
+      # Grabs latest repo
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Get all history to allow automatic versioning using MinVer
 
+      # Setup .NET
       - uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 6.x
      
+      # Restore nuget dependencies for this project
       - name: Restore dependencies
         run: dotnet restore
-        
+      
+      # Build the project 
       - name: Build
         run: dotnet build -c release
-        
+      
+      # Build the project to env variable "OutputDirectory"
       - name: Publish
         run: dotnet publish SimplePOS\SimplePOS.csproj -c release -r win-x86 -f net6.0-windows -p:PublishSingleFile=true --self-contained true -o ${{ env.OutputDirectory }}
 
+      # Zip the published content. Note "github.ref_name" is the tag that triggered this action
       - name: Compress archive
         run: compress-archive -path ${{ env.OutputDirectory }}\* -DestinationPath ${{github.workspace}}\SimplePOS-${{  github.ref_name }}.zip
-        
+      
+      # Push the zipped published content to an artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: release
           path: ${{github.workspace}}\SimplePOS-${{  github.ref_name }}.zip
-          
+      
+      # Create a release, and add the zipped published content
       - name: Release
         uses: ncipollo/release-action@v1
         with:
           artifacts: ${{github.workspace}}\SimplePOS-${{  github.ref_name }}.zip
           generateReleaseNotes: true
-          prerelease: true
