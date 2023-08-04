@@ -48,11 +48,11 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: release
-          path: ${{ github.workspace }}\SimplePOS-${{  github.ref_name }}.zip
+          path: SimplePOS-${{  github.ref_name }}.zip
           
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: '${{ github.workspace }}\SimplePOS-${{  github.ref_name }}.zip'
+          artifacts: 'SimplePOS-${{  github.ref_name }}.zip'
           generateReleaseNotes: true
           prerelease: true
