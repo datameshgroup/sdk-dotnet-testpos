@@ -27,7 +27,7 @@ namespace SimplePOS
         private readonly AppState appState;
         private Settings settings;
         private IFusionClient fusionClient;
-        private bool useFirstTerminalSettings = true;
+        private int selectedTerminalIndex = 0;
         private bool? displayAdvanceSettings = null;
 
         //File paths
@@ -78,14 +78,14 @@ namespace SimplePOS
 
             UpdateAdvanceSettingsVisibility();
 
-            NavigateToMainPage();
+            NavigateToMainPage(true);
 
             Initialization = InitializeAsync();
         }
 
         public async Task InitializeAsync()
         {
-            useFirstTerminalSettings = appState.UseFirstTerminalSettings;                        
+            selectedTerminalIndex = appState.SelectedTerminalIndex;                
 
             await CreateFusionClient();
 
@@ -117,7 +117,7 @@ namespace SimplePOS
             string poiID = Settings.POIID;
             string kek = Settings.KEK;
 
-            if (!useFirstTerminalSettings && doesTerminal2SettingsExist())
+            if ((selectedTerminalIndex == 1) && doesTerminal2SettingsExist())
             {
                 saleID = Settings.SaleID2;
                 poiID = Settings.POIID2;
@@ -214,7 +214,7 @@ namespace SimplePOS
 
         private void UpdateAppState(bool paymentInProgress, MessageHeader messageHeader = null)
         {
-            appState.UseFirstTerminalSettings = useFirstTerminalSettings;
+            appState.SelectedTerminalIndex = selectedTerminalIndex;
             appState.PaymentInProgress = paymentInProgress;
             appState.MessageHeader = messageHeader ?? appState.MessageHeader;
 
@@ -266,15 +266,22 @@ namespace SimplePOS
             GridMain.Visibility = Visibility.Collapsed;
         }
 
-        private void NavigateToMainPage()
+        private void NavigateToMainPage(bool updateTerminalSelectionSettings = false)
         {
-            if (doesTerminal2SettingsExist()){
-                BtnPaymentTerminal1.Content = "EFT(" + Settings.POIID + ")";
-                BtnPaymentTerminal2.Content = "EFT(" + Settings.POIID2 + ")";
-                BtnPaymentTerminal2.Visibility = Visibility.Visible;                
-            } else {
-                BtnPaymentTerminal1.Content = "EFT";
-                BtnPaymentTerminal2.Visibility = Visibility.Collapsed;                
+            if (updateTerminalSelectionSettings)
+            {
+                if (doesTerminal2SettingsExist())
+                {
+                    CboTerminalSelection.Items.Clear();
+                    CboTerminalSelection.Items.Add(Settings.POIID);
+                    CboTerminalSelection.Items.Add(Settings.POIID2);
+                    CboTerminalSelection.SelectedIndex = 0;
+                    SelectTerminalPanel.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    SelectTerminalPanel.Visibility = Visibility.Collapsed;
+                }
             }
             GridSettings.Visibility = Visibility.Collapsed;
             GridMain.Visibility = Visibility.Visible;
@@ -285,9 +292,10 @@ namespace SimplePOS
         {
             UpdateTerminalSettings();
             UpdateAdvanceSettingsVisibility();
+            selectedTerminalIndex = 0;
             File.WriteAllText(settingsFilePath, System.Text.Json.JsonSerializer.Serialize<Settings>(Settings));
             await CreateFusionClient();
-            NavigateToMainPage();
+            NavigateToMainPage(true);
         }
 
         private void UpdateTerminalSettings(bool updateAppMode = false)
@@ -306,11 +314,11 @@ namespace SimplePOS
                 Settings.POIID2 = string.Empty;
                 Settings.KEK2 = string.Empty;
 
-                useFirstTerminalSettings = true;
+                selectedTerminalIndex = 0;
 
                 if (updateAppMode)
                 {
-                    appState.UseFirstTerminalSettings = true;
+                    appState.SelectedTerminalIndex = 0;
                 }
             }
         }
@@ -322,10 +330,7 @@ namespace SimplePOS
 
         private async void BtnPayment_Click(object sender, RoutedEventArgs e)
         {
-            if (!useFirstTerminalSettings){
-                useFirstTerminalSettings = true;
-                await CreateFusionClient();                
-            }            
+            await InitialiseTerminalSettings();
             do
             {
                 // Perform payment
@@ -342,32 +347,7 @@ namespace SimplePOS
                     DisplayPaymentUIResponse(paymentUIResponse);
                 }
             } while (settings.EnableVolumeTest);
-        }
-
-        private async void BtnPaymentTerminal2_Click(object sender, RoutedEventArgs e)
-        {
-            if (useFirstTerminalSettings)
-            {
-                useFirstTerminalSettings = false;
-                await CreateFusionClient();                
-            }
-            do
-            {
-                // Perform payment
-                DateTime dateTime = DateTime.Now;
-                long tc64 = Environment.TickCount64;
-                PaymentUIResponse paymentUIResponse = await DoPayment();
-                tc64 = Environment.TickCount64 - tc64;
-
-                AppendPaymentEvent(DateTime.Now, "Payment", tc64, paymentUIResponse?.PaymentResponse?.Response.Success);
-
-                // Display if not in test mode
-                if (!settings.EnableVolumeTest)
-                {
-                    DisplayPaymentUIResponse(paymentUIResponse);
-                }
-            } while (settings.EnableVolumeTest);
-        }
+        }        
 
         private void BtnPaymentCryptoDotCom_Click(object sender, RoutedEventArgs e)
         {
@@ -435,11 +415,23 @@ namespace SimplePOS
             ShowPaymentDialog(paymentTypeName, "PAYMENT IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
 
             // Create basic payment
-            var paymentRequest = new PaymentRequest(
-                transactionID: Guid.NewGuid().ToString("N"),
-                requestedAmount: purchaseAmount,
-                paymentType: paymentType
-                );
+            // Construct payment request
+            PaymentRequest paymentRequest = new PaymentRequest()
+            {
+                PaymentData = new PaymentData()
+                {
+                    PaymentType = paymentType
+                },
+                PaymentTransaction = new PaymentTransaction()
+                {
+                    AmountsReq = new AmountsReq()
+                    {
+                        Currency = CurrencySymbol.AUD,
+                        RequestedAmount = purchaseAmount,
+                        TipAmount = tipAmount
+                    }
+                }
+            };
 
             bool isMockDataLoaded = false;
             try
@@ -448,10 +440,7 @@ namespace SimplePOS
 
                 if ((mockData.SaleItems != null) && (mockData.SaleItems.Count > 0))
                 {
-                    foreach (SaleItem saleItem in mockData.SaleItems)
-                    {
-                        paymentRequest.AddSaleItem(productCode: saleItem.ProductCode, productLabel: saleItem.ProductLabel, itemAmount: saleItem.ItemAmount, category: saleItem.Category, subCategory: saleItem.SubCategory);
-                    }
+                    paymentRequest.PaymentTransaction.SaleItem = mockData.SaleItems;
                     isMockDataLoaded = true;
                 }                
             } 
@@ -460,69 +449,22 @@ namespace SimplePOS
            
                 File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - Unable to load Mock Data: {ex?.Message ?? ""}{Environment.NewLine}");
             }
+            
+            SaleData saleData = new SaleData()
+            {
+                SaleTransactionID = new TransactionIdentification()
+                {
+                    TransactionID = Guid.NewGuid().ToString("N"),
+                    TimeStamp = DateTime.UtcNow
+                },
+            };
+            saleData.OperatorID = settings.OperatorID;
+            saleData.ShiftNumber = settings.ShiftNumber;
+            paymentRequest.SaleData = saleData;
 
             if (!isMockDataLoaded)
             {
-                decimal quarterAmount = purchaseAmount / 4;
-                // Create sale item
-                SaleItem parentItem = paymentRequest.AddSaleItem(
-                    productCode: "XXVH776",
-                    productLabel: "Big Kahuna Burger",
-                    quantity: 3,
-                    unitPrice: quarterAmount,
-                    itemAmount: quarterAmount * 3,
-                    category: "food",
-                    subCategory: "mains"
-                    );
-                // Sale item modifiers
-                paymentRequest.AddSaleItem(
-                        productCode: "XXVH776-0",
-                        productLabel: "Extra pineapple",
-                        parentItemID: parentItem.ItemID,
-                       itemAmount: 0,
-                       category: "food",
-                       subCategory: "mains"
-                       );
-                paymentRequest.AddSaleItem(
-                        productCode: "XXVH776-1",
-                        productLabel: "Extra sauce",
-                        parentItemID: parentItem.ItemID,
-                        itemAmount: 0,
-                        category: "food",
-                        subCategory: "sides"
-                );
-                paymentRequest.AddSaleItem(
-                    productCode: "XXVH776-2",
-                   productLabel: "Side of fries (Large)",
-                   parentItemID: parentItem.ItemID,
-                   quantity: 1,
-                   unitPrice: quarterAmount,
-                   itemAmount: quarterAmount,
-                   category: "food",
-                   subCategory: "sides"
-                   );                
-                // Full sale item
-                //paymentRequest.AddSaleItem(
-                //    productCode: "AB54447",
-                //    productLabel: "Das Keyboard 4 Ultimate",
-                //    itemAmount: 449.95M,
-                //    quantity: 1,
-                //    unitOfMeasure: UnitOfMeasure.Other,
-                //    eanUpc: "DASK4ULTMBLU",
-                //    additionalProductInfo: "Mechanical Keyboard - Cherry MX Blue switch",
-                //    unitPrice: 299.95M,
-                //    taxCode: "GST",
-                //    costBase: 249.95m,
-                //    discount: 50.00m,
-                //    discountReason: "$50 voucher",
-                //    categories: new List<string>() { "Input Devices", "Keyboards", "Mechanical Keyboards" },
-                //    brand: "Das",
-                //    quantityInStock: 42,
-                //    pageURL: "https://mypage/keyboards/AB54447.html",
-                //    imageURLs: new List<string>() { "https://mypage/keyboards/AB54447.jpg" },
-                //    weight: 1.5m,
-                //    weightUnitOfMeasure: WeightUnitOfMeasure.Kilogram
-                //    );
+                SetDefaultSaleItems(paymentRequest, purchaseAmount);                
             }
 
             string paymentServiceID = null;
@@ -658,6 +600,62 @@ namespace SimplePOS
             return paymentUIResponse;
         }
 
+        private async Task InitialiseTerminalSettings()
+        {
+            int currentSelectTerminalIndex = 0;
+            if ((SelectTerminalPanel.Visibility == Visibility.Visible) && (CboTerminalSelection.SelectedIndex > -1))
+            {
+                currentSelectTerminalIndex = CboTerminalSelection.SelectedIndex;
+            }
+            if (currentSelectTerminalIndex != selectedTerminalIndex)
+            {
+                selectedTerminalIndex = currentSelectTerminalIndex;
+                await CreateFusionClient();
+            }
+        }
+
+        private void SetDefaultSaleItems(PaymentRequest paymentRequest, decimal purchaseAmount)
+        {
+            decimal quarterAmount = purchaseAmount / 4;
+            // Create sale item
+            SaleItem parentItem = paymentRequest.AddSaleItem(
+                productCode: "XXVH776",
+                productLabel: "Big Kahuna Burger",
+                quantity: 3,
+                unitPrice: quarterAmount,
+                itemAmount: quarterAmount * 3,
+                category: "food",
+                subCategory: "mains"
+                );
+            // Sale item modifiers
+            paymentRequest.AddSaleItem(
+            productCode: "XXVH776-0",
+            productLabel: "Extra pineapple",
+            parentItemID: parentItem.ItemID,
+                   itemAmount: 0,
+                   category: "food",
+                   subCategory: "mains"
+                   );
+            paymentRequest.AddSaleItem(
+            productCode: "XXVH776-1",
+            productLabel: "Extra sauce",
+            parentItemID: parentItem.ItemID,
+            itemAmount: 0,
+            category: "food",
+            subCategory: "sides"
+            );
+            paymentRequest.AddSaleItem(
+                productCode: "XXVH776-2",
+               productLabel: "Side of fries (Large)",
+               parentItemID: parentItem.ItemID,
+               quantity: 1,
+               unitPrice: quarterAmount,
+               itemAmount: quarterAmount,
+               category: "food",
+               subCategory: "sides"
+               );                       
+        }        
+
         private async void BtnReconciliation_Click(object sender, RoutedEventArgs e)
         {
             string paymentTypeName = "SETTLE";
@@ -665,6 +663,7 @@ namespace SimplePOS
 
             try
             {
+                await InitialiseTerminalSettings();
                 var r = await fusionClient.SendRecvAsync<ReconciliationResponse>(new ReconciliationRequest(ReconciliationType.SaleReconciliation));
                 if (r.Response.Result != Result.Failure)
                 {
@@ -727,6 +726,8 @@ namespace SimplePOS
 
             try
             {
+                await InitialiseTerminalSettings();
+
                 var r = await fusionClient.SendRecvAsync<TransactionStatusResponse>(transactionStatusRequest);
 
                 // If the response to our TransactionStatus request is "Success", we have a PaymentResponse to check
@@ -1061,11 +1062,28 @@ namespace SimplePOS
             PaymentCompleteGrid.Visibility = Visibility.Visible;
         }
 
+        private void ShowPaymentDialogSuccess(string caption)
+        {
+            PaymentResponse = null;
+            TxtReceipt.Text = "";
+            
+            // Set caption
+            LblPaymentCompleteCaption.Content = caption;
+            BorderPaymentCompleteTitle.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0x8A, 0x00));
+            LblPaymentCompleteTitle.Foreground = new SolidColorBrush(Colors.White);
+            LblPaymentCompleteTitle.Content = "GET TOTALS APPROVED";
+
+            // Show/hide views
+            GridMain.Visibility = Visibility.Collapsed;
+            PaymentDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentCompleteGrid.Visibility = Visibility.Visible;
+        }
+
         private void ShowPaymentDialogFailed(string caption, string displayLine1 = null, string displayText = null, PaymentResponse paymentResponse = null)
         {
             if(paymentResponse == null)
             {
-                ShowPaymentDialog(caption, "PAYMENT DECLINED", displayLine1, displayText, LightBoxDialogType.Error, true, false);
+                ShowPaymentDialog(caption, "TRANSACTION DECLINED", displayLine1, displayText, LightBoxDialogType.Error, true, false);
                 return;
             }
 
@@ -1166,6 +1184,7 @@ namespace SimplePOS
 
             try
             {
+                await InitialiseTerminalSettings();
                 LogoutResponse r = await fusionClient.SendRecvAsync<LogoutResponse>(new LogoutRequest());
                 if (r.Response.Result != Result.Failure)
                 {
@@ -1189,6 +1208,7 @@ namespace SimplePOS
 
             try
             {
+                await InitialiseTerminalSettings();
                 LoginResponse r = await fusionClient.SendRecvAsync<LoginResponse>(fusionClient.LoginRequest);
                 if (r.Response.Result != Result.Failure)
                 {

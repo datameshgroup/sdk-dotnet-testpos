@@ -13,12 +13,12 @@ namespace SimplePOS
         {
             PaymentInProgress = false;
             MessageHeader = null;
-            UseFirstTerminalSettings = true;
+            SelectedTerminalIndex = 0;
         }
 
         public bool PaymentInProgress { get; set; }
 
-        public bool UseFirstTerminalSettings { get; set; }
+        public int SelectedTerminalIndex { get; set; }
 
         public MessageHeader MessageHeader { get; set; }
     }
