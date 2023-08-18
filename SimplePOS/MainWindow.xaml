@@ -151,17 +151,22 @@
 
                 <StackPanel Margin="16,0,0,0">
                     <Label Content="POS Lane Settings 1" Style="{StaticResource SubTitleLabel}"/>
-                    <WrapPanel>
-                        <Label Content="Sale ID"/>
-                        <TextBox x:Name="TxtSaleId" Text="{Binding Settings.SaleID, Mode=TwoWay}"/>
-                    </WrapPanel>
-                    <WrapPanel>
+                    <WrapPanel x:Name="WPPOIID">
                         <Label Content="POI ID"/>
-                        <TextBox x:Name="TxtPOIID" Text="{Binding Settings.POIID, Mode=TwoWay}"/>
+                        <Label Content="{Binding Settings.POIID, Mode=OneWay}" Style="{StaticResource SubTitleLabel}"/>
                     </WrapPanel>
+                    <WrapPanel x:Name="WPPairWithTerminal">
+                        <Label Content=""/>
+                        <Button Content="Pair with Terminal" Click="BtnPairWithTerminal_Click" Height="40"  VerticalAlignment="Top" Width="183"/>
+                    </WrapPanel>
+                    <WrapPanel x:Name="WPUnpairFromTerminal">
+                        <Label Content=""/>
+                        <Button Content="Unpair from Terminal" Click="BtnUnpairFromTerminal_Click" Height="40"  VerticalAlignment="Top" Width="200"/>
+                    </WrapPanel>
+                    <Label Content="POS Settings" Style="{StaticResource SubTitleLabel}"/>
                     <WrapPanel>
-                        <Label Content="KEK"/>
-                        <TextBox x:Name="TxtKEK" Text="{Binding Settings.KEK, Mode=TwoWay}"/>
+                        <Label Content="POS Name"/>
+                        <TextBox x:Name="TxtPOSName" Text="{Binding Settings.POSName, Mode=TwoWay}"/>
                     </WrapPanel>
 
                     <Label Content="POS Software Settings" Style="{StaticResource SubTitleLabel}"/>
@@ -202,19 +207,18 @@
 
                 <StackPanel Grid.Column="2" Margin="16,0,0,0">
                     <Label Content="POS Lane Settings 2" Style="{StaticResource SubTitleLabel}"/>
-                    <WrapPanel>
-                        <Label Content="Sale ID"/>
-                        <TextBox x:Name="TxtSaleId2" Text="{Binding Settings.SaleID2, Mode=TwoWay}"/>
-                    </WrapPanel>
-                    <WrapPanel>
+                    <WrapPanel x:Name="WPPOIID2">
                         <Label Content="POI ID"/>
-                        <TextBox x:Name="TxtPOIID2" Text="{Binding Settings.POIID2, Mode=TwoWay}"/>
+                        <Label Content="{Binding Settings.POIID2, Mode=OneWay}" Style="{StaticResource SubTitleLabel}"/>
                     </WrapPanel>
-                    <WrapPanel>
-                        <Label Content="KEK"/>
-                        <TextBox x:Name="TxtKEK2" Text="{Binding Settings.KEK2, Mode=TwoWay}"/>
+                    <WrapPanel x:Name="WPPairWithTerminal2">
+                        <Label Content=""/>
+                        <Button Content="Pair with Terminal" Click="BtnPairWithTerminal2_Click" Height="40"  VerticalAlignment="Top" Width="183"/>
                     </WrapPanel>
-                    
+                    <WrapPanel x:Name="WPUnpairFromTerminal2">
+                        <Label Content=""/>
+                        <Button Content="Unpair from Terminal" Click="BtnUnpairWithTerminal2_Click" Height="40"  VerticalAlignment="Top" Width="200"/>
+                    </WrapPanel>
                     <Label Content="Shift Settings" Style="{StaticResource SubTitleLabel}"/>
                     <WrapPanel>
                         <Label Content="Operator ID"/>

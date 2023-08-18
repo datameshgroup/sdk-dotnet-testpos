@@ -24,6 +24,20 @@ namespace SimplePOS
             }
         }
 
+        private string posName;
+        public string POSName
+        {
+            get => posName;
+            set
+            {
+                if (value != posName)
+                {
+                    posName = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
         private string saleID;
         public string SaleID
         {
@@ -261,21 +275,7 @@ namespace SimplePOS
                     NotifyPropertyChanged();
                 }
             }
-        }
-
-        private string saleID2 = string.Empty;
-        public string SaleID2
-        {
-            get => saleID2;
-            set
-            {
-                if (value != saleID2)
-                {
-                    saleID2 = value;
-                    NotifyPropertyChanged();
-                }
-            }
-        }
+        }        
 
         private string poiID2 = string.Empty;
         public string POIID2
@@ -286,20 +286,6 @@ namespace SimplePOS
                 if (value != poiID2)
                 {
                     poiID2 = value;
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-
-        private string kek2 = string.Empty;
-        public string KEK2
-        {
-            get => kek2;
-            set
-            {
-                if (value != kek2)
-                {
-                    kek2 = value;
                     NotifyPropertyChanged();
                 }
             }

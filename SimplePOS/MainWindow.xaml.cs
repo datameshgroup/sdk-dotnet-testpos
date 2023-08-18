@@ -1,5 +1,6 @@
 ﻿using DataMeshGroup.Fusion;
 using DataMeshGroup.Fusion.Model;
+using DataMeshGroup.Fusion.Pairing.WinForms;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -71,7 +72,7 @@ namespace SimplePOS
             DataContext = this;
             InitializeComponent();            
 
-            Settings = LoadSettings();
+            LoadSettings();
             appState = LoadAppState();
 
             UpdateTerminalSettings(true);
@@ -118,10 +119,8 @@ namespace SimplePOS
             string kek = Settings.KEK;
 
             if ((selectedTerminalIndex == 1) && doesTerminal2SettingsExist())
-            {
-                saleID = Settings.SaleID2;
-                poiID = Settings.POIID2;
-                kek = Settings.KEK2;
+            {                
+                poiID = Settings.POIID2;                
             }
 
             fusionClient = new FusionClient(Settings.UseTestEnvironment)
@@ -142,9 +141,7 @@ namespace SimplePOS
 
         private bool doesTerminal2SettingsExist()
         {
-            return !String.IsNullOrEmpty(Settings.SaleID2) &&
-                !String.IsNullOrEmpty(Settings.POIID2) &&
-                !String.IsNullOrEmpty(Settings.KEK2);
+            return !String.IsNullOrEmpty(Settings.POIID2);   
         }
 
         private void FusionClient_OnConnectError(object sender, EventArgs e)
@@ -182,29 +179,30 @@ namespace SimplePOS
 
         #region Settings, AppState, & Mock Data
 
-        private Settings LoadSettings()
+        private void LoadSettings()
         {
-            if (!File.Exists(settingsFilePath))
+            if (File.Exists(settingsFilePath))
             {
-                NavigateToSettingsPage();
-                return new Settings()
+                Settings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(settingsFilePath));
+            }    
+            else
+            {
+                Settings = new Settings()
                 {
                     SaleID = "",
                     POIID = "",
                     KEK = "",
-                    SaleID2 = "",
                     POIID2 = "",
-                    KEK2 = "",
-                    ProviderIdentification = "Company A",
-                    ApplicationName = "POS Retail",
+                    ProviderIdentification = "DMG",
+                    ApplicationName = "Integration POS App",
                     SoftwareVersion = "01.00.00",
-                    CertificationCode = "98cf9dfc-0db7-4a92-8b8cb66d4d2d7169",
+                    CertificationCode = "28bf60f2-ddc6-448c-aa11-aeb463658cd2",
                     OperatorID = null,
-                    ShiftNumber = null
+                    ShiftNumber = null,
+                    POSName = Environment.MachineName
                 };
-            }
-
-            return JsonConvert.DeserializeObject<Settings>(File.ReadAllText(settingsFilePath));
+                NavigateToSettingsPage();                
+            }           
         }
 
         private AppState LoadAppState()
@@ -262,6 +260,7 @@ namespace SimplePOS
         #region Navigation
         private void NavigateToSettingsPage()
         {
+            UpdateAllTerminalDisplay();
             GridSettings.Visibility = Visibility.Visible;
             GridMain.Visibility = Visibility.Collapsed;
         }
@@ -301,18 +300,12 @@ namespace SimplePOS
         private void UpdateTerminalSettings(bool updateAppMode = false)
         {       
             //If only the Terminal 2 Settings were set, place the settings to the first terminal instead.            
-            if(String.IsNullOrEmpty(Settings.SaleID)  &&
-                String.IsNullOrEmpty(Settings.POIID) &&
-                String.IsNullOrEmpty(Settings.KEK) && 
+            if(String.IsNullOrEmpty(Settings.POIID) &&               
                 doesTerminal2SettingsExist())
-            {
-                Settings.SaleID = (new StringBuilder(Settings.SaleID2)).ToString();
-                Settings.POIID = (new StringBuilder(Settings.POIID2)).ToString();
-                Settings.KEK = (new StringBuilder(Settings.KEK2)).ToString();
+            {                
+                Settings.POIID = (new StringBuilder(Settings.POIID2)).ToString();                
 
-                Settings.SaleID2 = string.Empty;
                 Settings.POIID2 = string.Empty;
-                Settings.KEK2 = string.Empty;
 
                 selectedTerminalIndex = 0;
 
@@ -326,6 +319,26 @@ namespace SimplePOS
         private void BtnViewSettings_Click(object sender, RoutedEventArgs e)
         {
             NavigateToSettingsPage();
+        }
+
+        private async void BtnPairWithTerminal_Click(object sender, RoutedEventArgs e)
+        {
+            await PairTerminal(0);
+        }
+
+        private async void BtnPairWithTerminal2_Click(object sender, RoutedEventArgs e)
+        {
+            await PairTerminal(1);
+        }
+
+        private void BtnUnpairFromTerminal_Click(object sender, RoutedEventArgs e)
+        {
+            UnpairFromTerminal(0);
+        }
+
+        private void BtnUnpairWithTerminal2_Click(object sender, RoutedEventArgs e)
+        {
+            UnpairFromTerminal(1);
         }
 
         private async void BtnPayment_Click(object sender, RoutedEventArgs e)
@@ -598,6 +611,93 @@ namespace SimplePOS
             }
 
             return paymentUIResponse;
+        }
+
+        private async Task PairTerminal(int terminalIndex)
+        {
+            FusionClient fusionClient = new FusionClient(useTestEnvironment: true)
+            {
+                LoginRequest = new LoginRequest(settings.ProviderIdentification, settings.ApplicationName, settings.SoftwareVersion, settings.CertificationCode)
+            };
+            if (settings.UseTestEnvironment && !string.IsNullOrEmpty(settings.CustomNexoURL))
+            {
+                fusionClient.CustomURL = settings.CustomNexoURL;
+                fusionClient.URL = UnifyURL.Custom;
+            }            
+
+            PairingDialog pairingDialog = new(fusionClient, settings.POSName);
+            if (!string.IsNullOrEmpty(settings.SaleID))
+            {
+                fusionClient.SaleID = settings.SaleID;
+            }
+            if(!string.IsNullOrEmpty(settings.KEK))
+            {
+                fusionClient.KEK = settings.KEK;
+            }
+            if (pairingDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                settings.SaleID = pairingDialog.SaleID;
+                settings.KEK = pairingDialog.KEK;
+                if (terminalIndex == 0)
+                {
+                    if (!pairingDialog.POIID.Equals(settings.POIID2)) //don't pair the same terminal twice
+                    {
+                        settings.POIID = pairingDialog.POIID;
+                    }
+                }
+                else if (!pairingDialog.POIID.Equals(settings.POIID)) //don't pair the same terminal twice
+                {
+                    settings.POIID2 = pairingDialog.POIID; 
+                }                
+                UpdateTerminalDisplay(terminalIndex);
+            }
+        }
+
+        private void UpdateAllTerminalDisplay()
+        {
+            UpdateTerminalDisplay(0);
+            UpdateTerminalDisplay(1);
+        }
+
+        private void UnpairFromTerminal(int terminalIndex)
+        {
+            if(terminalIndex == 0)
+            {
+                Settings.POIID = string.Empty;
+            }
+            else
+            {
+                Settings.POIID2 = string.Empty;
+            }
+            UpdateTerminalDisplay(terminalIndex);
+        }
+
+        private void UpdateTerminalDisplay(int terminalIndex)
+        {
+            if(terminalIndex == 0)
+            {
+                if(String.IsNullOrEmpty(Settings.POIID)) {
+                    WPPOIID.Visibility = Visibility.Collapsed;
+                    WPPairWithTerminal.Visibility = Visibility.Visible;
+                    WPUnpairFromTerminal.Visibility = Visibility.Collapsed;                    
+                } else {
+                    WPPOIID.Visibility = Visibility.Visible;
+                    WPPairWithTerminal.Visibility = Visibility.Collapsed;
+                    WPUnpairFromTerminal.Visibility = Visibility.Visible;                    
+                }
+            } else {
+                if (String.IsNullOrEmpty(Settings.POIID2)){
+                    WPPOIID2.Visibility = Visibility.Collapsed;
+                    WPPairWithTerminal2.Visibility = Visibility.Visible;
+                    WPUnpairFromTerminal2.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    WPPOIID2.Visibility = Visibility.Visible;
+                    WPPairWithTerminal2.Visibility = Visibility.Collapsed;
+                    WPUnpairFromTerminal2.Visibility = Visibility.Visible;                    
+                }
+            }
         }
 
         private async Task InitialiseTerminalSettings()
