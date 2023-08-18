@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SimplePOS" d:DataContext="{d:DesignInstance Type=local:MainWindow}"
         mc:Ignorable="d"
-        Title="MainWindow" Height="800" Width="1024">
+        Title="MainWindow" Height="850" Width="1024">
 
     <Window.Resources>
         <Storyboard x:Key="WaitStoryboard">
@@ -294,6 +294,12 @@
                 <!--Left column-->
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Row="0" Padding="0,0,2,0">
                     <StackPanel>
+                        <WrapPanel x:Name="SelectTerminalPanel" Visibility="Collapsed">
+                            <Label Content="Terminal POI ID"/>
+                            <ComboBox x:Name="CboTerminalSelection">
+                            </ComboBox>
+                        </WrapPanel>
+                        <Label Content="Transaction Data" Style="{StaticResource SubTitleLabel}"/>
                         <WrapPanel>
                             <Label Content="Transaction Type"/>
                             <ComboBox x:Name="CboTxnType" SelectedIndex="0">
@@ -344,10 +350,9 @@
                     <Label Content="Tender Options" Style="{StaticResource SubTitleLabel}"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button x:Name="BtnPaymentTerminal1" Content="EFT" Click="BtnPayment_Click" Height="40"  VerticalAlignment="Top" Width="183"/>
-                        <Button x:Name="BtnPaymentTerminal2" Content="EFT" Click="BtnPaymentTerminal2_Click" Height="40"  VerticalAlignment="Top" Visibility="Collapsed" Width="183"/>
                     </StackPanel>
                     <StackPanel x:Name="SPanelTxnStatus" Orientation="Vertical">
-                        <Label Content="Transaction Status Options" Style="{StaticResource SubTitleLabel}"/>
+                        <Label Content="Existing Transaction Options" Style="{StaticResource SubTitleLabel}"/>
                         <WrapPanel>
                             <Label Content="Transaction Status Type"/>
                             <ComboBox x:Name="CboTxnStatusType" SelectedIndex="0">
@@ -510,6 +515,8 @@
                                 <WrapPanel>
                                     <Label Content="Payment brand"/>
                                     <TextBox Text="{Binding PaymentResponse.PaymentResult.PaymentInstrumentData.CardData.PaymentBrand, Mode=OneWay}"/>
+                                    <Label Content="Payment brand enum"/>
+                                    <TextBox Text="{Binding PaymentResponse.PaymentResult.PaymentInstrumentData.CardData.PaymentBrandEnum, Mode=OneWay}"/>
                                 </WrapPanel>
                                 <WrapPanel>
                                     <Label Content="Entry mode"/>

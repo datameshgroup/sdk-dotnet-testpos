@@ -1,0 +1,31 @@
+{
+	"PaymentSaleItems": [
+		{
+			"ItemID": "407200",
+			"ProductCode": "13",
+			"UnitOfMeasure": "EA",
+			"Quantity": "1",
+			"UnitPrice": "13.99",
+			"ItemAmount": 9.99,
+			"ProductLabel": "Red Bull 4x250mL"
+		},
+		{
+			"ItemID": "578891",
+			"ProductCode": "1",
+			"UnitOfMeasure": "EA",
+			"Quantity": "1",
+			"UnitPrice": "28.95",
+			"ItemAmount": 28.95,
+			"ProductLabel": "Lambert & Butler 20 Blue"
+		},
+		{
+			"ItemID": "452904",
+			"ProductCode": "23",
+			"UnitOfMeasure": "EA",
+			"Quantity": "1",
+			"UnitPrice": "6.5",
+			"ItemAmount": 6.5,
+			"ProductLabel": "Max Cappuccino"
+		}
+	]
+}
