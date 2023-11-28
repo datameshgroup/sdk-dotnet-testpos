@@ -300,7 +300,7 @@
                     <StackPanel>
                         <WrapPanel x:Name="SelectTerminalPanel" Visibility="Collapsed">
                             <Label Content="Terminal POI ID"/>
-                            <ComboBox x:Name="CboTerminalSelection">
+                            <ComboBox x:Name="CboTerminalSelection" SelectionChanged="CboTerminalSelection_SelectionChanged">
                             </ComboBox>
                         </WrapPanel>
                         <Label Content="Transaction Data" Style="{StaticResource SubTitleLabel}"/>
@@ -538,6 +538,10 @@
                                     <Label Content="Card token"/>
                                     <TextBox Text="{Binding PaymentResponse.PaymentResult.PaymentInstrumentData.CardData.PaymentToken.TokenValue, Mode=OneWay}"/>
                                 </WrapPanel>
+                                <WrapPanel>
+                                    <Label Content="AcquirerID"/>
+                                    <TextBox Text="{Binding PaymentResponse.PaymentResult.PaymentAcquirerData.AcquirerID, Mode=OneWay}" TextWrapping="Wrap"/>
+                                </WrapPanel>                                
                                 <WrapPanel>
                                     <Label Content="Error Condition"/>
                                     <TextBox Text="{Binding PaymentResponse.Response.ErrorCondition, Mode=OneWay}"/>

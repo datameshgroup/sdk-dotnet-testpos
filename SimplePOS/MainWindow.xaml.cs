@@ -75,7 +75,7 @@ namespace SimplePOS
             LoadSettings();
             appState = LoadAppState();
 
-            UpdateTerminalSettings(true);
+            UpdateTerminalSettings();
 
             UpdateAdvanceSettingsVisibility();
 
@@ -86,7 +86,7 @@ namespace SimplePOS
 
         public async Task InitializeAsync()
         {
-            selectedTerminalIndex = appState.SelectedTerminalIndex;                
+            selectedTerminalIndex = Settings.SelectedTerminalIndex;                
 
             await CreateFusionClient();
 
@@ -211,9 +211,7 @@ namespace SimplePOS
         }
 
         private void UpdateAppState(bool paymentInProgress, MessageHeader messageHeader = null)
-        {
-            appState.SelectedTerminalIndex = selectedTerminalIndex;
-            appState.PaymentInProgress = paymentInProgress;
+        {                        
             appState.MessageHeader = messageHeader ?? appState.MessageHeader;
 
             File.WriteAllText(appStateFilePath, JsonConvert.SerializeObject(appState));
@@ -273,14 +271,20 @@ namespace SimplePOS
                 {
                     CboTerminalSelection.Items.Clear();
                     CboTerminalSelection.Items.Add(Settings.POIID);
-                    CboTerminalSelection.Items.Add(Settings.POIID2);
-                    CboTerminalSelection.SelectedIndex = 0;
+                    CboTerminalSelection.Items.Add(Settings.POIID2);                    
+                    if (selectedTerminalIndex > CboTerminalSelection.Items.Count)
+                    {
+                        selectedTerminalIndex = 0;
+                    }                                         
                     SelectTerminalPanel.Visibility = Visibility.Visible;
                 }
                 else
                 {
+                    selectedTerminalIndex = 0;
                     SelectTerminalPanel.Visibility = Visibility.Collapsed;
                 }
+                SaveTerminalIndex();
+                CboTerminalSelection.SelectedIndex = selectedTerminalIndex;
             }
             GridSettings.Visibility = Visibility.Collapsed;
             GridMain.Visibility = Visibility.Visible;
@@ -291,13 +295,12 @@ namespace SimplePOS
         {
             UpdateTerminalSettings();
             UpdateAdvanceSettingsVisibility();
-            selectedTerminalIndex = 0;
             File.WriteAllText(settingsFilePath, System.Text.Json.JsonSerializer.Serialize<Settings>(Settings));
             await CreateFusionClient();
             NavigateToMainPage(true);
         }
 
-        private void UpdateTerminalSettings(bool updateAppMode = false)
+        private void UpdateTerminalSettings()
         {       
             //If only the Terminal 2 Settings were set, place the settings to the first terminal instead.            
             if(String.IsNullOrEmpty(Settings.POIID) &&               
@@ -309,10 +312,7 @@ namespace SimplePOS
 
                 selectedTerminalIndex = 0;
 
-                if (updateAppMode)
-                {
-                    appState.SelectedTerminalIndex = 0;
-                }
+                SaveTerminalIndex();
             }
         }
 
@@ -343,7 +343,7 @@ namespace SimplePOS
 
         private async void BtnPayment_Click(object sender, RoutedEventArgs e)
         {
-            await InitialiseTerminalSettings();
+            await CreateFusionClient();
             do
             {
                 // Perform payment
@@ -700,20 +700,6 @@ namespace SimplePOS
             }
         }
 
-        private async Task InitialiseTerminalSettings()
-        {
-            int currentSelectTerminalIndex = 0;
-            if ((SelectTerminalPanel.Visibility == Visibility.Visible) && (CboTerminalSelection.SelectedIndex > -1))
-            {
-                currentSelectTerminalIndex = CboTerminalSelection.SelectedIndex;
-            }
-            if (currentSelectTerminalIndex != selectedTerminalIndex)
-            {
-                selectedTerminalIndex = currentSelectTerminalIndex;
-                await CreateFusionClient();
-            }
-        }
-
         private void SetDefaultSaleItems(PaymentRequest paymentRequest, decimal purchaseAmount)
         {
             decimal quarterAmount = purchaseAmount / 4;
@@ -763,7 +749,7 @@ namespace SimplePOS
 
             try
             {
-                await InitialiseTerminalSettings();
+                await CreateFusionClient();
                 var r = await fusionClient.SendRecvAsync<ReconciliationResponse>(new ReconciliationRequest(ReconciliationType.SaleReconciliation));
                 if (r.Response.Result != Result.Failure)
                 {
@@ -826,7 +812,7 @@ namespace SimplePOS
 
             try
             {
-                await InitialiseTerminalSettings();
+                await CreateFusionClient();
 
                 var r = await fusionClient.SendRecvAsync<TransactionStatusResponse>(transactionStatusRequest);
 
@@ -1087,6 +1073,14 @@ namespace SimplePOS
             return paymentUIResponse;
         }
 
+        private void SaveTerminalIndex() 
+        {
+            if (Settings.SelectedTerminalIndex != selectedTerminalIndex)
+            {
+                Settings.SelectedTerminalIndex = selectedTerminalIndex;
+                File.WriteAllText(settingsFilePath, System.Text.Json.JsonSerializer.Serialize<Settings>(Settings));
+            }
+        }
 
         #region Message build helpers
         private LoginRequest BuildLoginRequest()
@@ -1284,7 +1278,7 @@ namespace SimplePOS
 
             try
             {
-                await InitialiseTerminalSettings();
+                await CreateFusionClient();
                 LogoutResponse r = await fusionClient.SendRecvAsync<LogoutResponse>(new LogoutRequest());
                 if (r.Response.Result != Result.Failure)
                 {
@@ -1308,7 +1302,7 @@ namespace SimplePOS
 
             try
             {
-                await InitialiseTerminalSettings();
+                await CreateFusionClient();
                 LoginResponse r = await fusionClient.SendRecvAsync<LoginResponse>(fusionClient.LoginRequest);
                 if (r.Response.Result != Result.Failure)
                 {
@@ -1322,6 +1316,15 @@ namespace SimplePOS
             catch (Exception ex)
             {
                 ShowPaymentDialogFailed(paymentTypeName, null, ex.Message);
+            }
+        }
+
+        private void CboTerminalSelection_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if((CboTerminalSelection.SelectedIndex >= 0) && (selectedTerminalIndex != CboTerminalSelection.SelectedIndex))
+            {
+                selectedTerminalIndex = CboTerminalSelection.SelectedIndex;
+                SaveTerminalIndex();
             }
         }
     }

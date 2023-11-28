@@ -305,6 +305,20 @@ namespace SimplePOS
             }
         }
 
+        private int selectedTerminalIndex = 0;
+        public int SelectedTerminalIndex
+        {
+            get => selectedTerminalIndex;
+            set
+            {
+                if (value != selectedTerminalIndex)
+                {
+                    selectedTerminalIndex = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
         #region INotifyPropertyChanged
         public event PropertyChangedEventHandler PropertyChanged;
 
