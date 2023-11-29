@@ -211,7 +211,8 @@ namespace SimplePOS
         }
 
         private void UpdateAppState(bool paymentInProgress, MessageHeader messageHeader = null)
-        {                        
+        {
+            appState.PaymentInProgress = paymentInProgress;
             appState.MessageHeader = messageHeader ?? appState.MessageHeader;
 
             File.WriteAllText(appStateFilePath, JsonConvert.SerializeObject(appState));
