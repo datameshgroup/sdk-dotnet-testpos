@@ -1373,7 +1373,7 @@ namespace SimplePOS
         private async Task SendResponseToHost(MessagePayload messagePayload)
         {
             // Try cancel of payment if one is in progress, otherwise just close this dialog
-            if (appState.PaymentInProgress && appState?.MessageHeader is not null)
+            if ((messagePayload != null) && appState.PaymentInProgress && (appState?.MessageHeader is not null))
             {
                 try
                 {
@@ -1390,14 +1390,15 @@ namespace SimplePOS
                 else
                 {
                     PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
-                }
-                receivedMessageFromHost = RequestMessageFromHost.None;
+                }                
             }
             else
             {
                 UpdateAppState(false);
                 NavigateToMainPage();
             }
+
+            receivedMessageFromHost = RequestMessageFromHost.None;
         }
 
         #endregion
@@ -1491,11 +1492,8 @@ namespace SimplePOS
                     }
                 };
             }
-
-            if (messagePayload != null)
-            {
-                await SendResponseToHost(messagePayload);
-            }
+            
+            await SendResponseToHost(messagePayload);
 
         }
 
@@ -1530,10 +1528,8 @@ namespace SimplePOS
                     }
                 };
             }
-            if (messagePayload != null)
-            {
-                await SendResponseToHost(messagePayload);
-            }            
+            
+            await SendResponseToHost(messagePayload);            
         }
 
         /// <summary>
