@@ -1,16 +1,42 @@
 {
 	"PaymentSaleItems": [
 		{
-			"ItemID": "407200",
+			"ItemID": "0",
+			"ProductCode": 5,
+			"UnitOfMeasure": "Litre",
+			"Quantity": "7.62",
+			"UnitPrice": "1.97900262",
+			"ItemAmount": 15.08,
+			"ProductLabel": "BP Unleaded 91",
+			"CustomFields": [
+				{
+					"Key": "FuelProductCode",
+					"Type": "String",
+					"Value": "21"
+				},
+				{
+					"Key": "FuelProductCodeShellCard",
+					"Type": "String",
+					"Value": "35"
+				},
+				{
+					"Key": "FuelProductCodeFleetcard",
+					"Type": "String",
+					"Value": "21"
+				}
+			]
+		},
+		{
+			"ItemID": "1",
 			"ProductCode": "13",
 			"UnitOfMeasure": "EA",
 			"Quantity": "1",
-			"UnitPrice": "13.99",
+			"UnitPrice": "9.99",
 			"ItemAmount": 9.99,
 			"ProductLabel": "Red Bull 4x250mL"
 		},
 		{
-			"ItemID": "578891",
+			"ItemID": "2",
 			"ProductCode": "1",
 			"UnitOfMeasure": "EA",
 			"Quantity": "1",
@@ -19,7 +45,7 @@
 			"ProductLabel": "Lambert & Butler 20 Blue"
 		},
 		{
-			"ItemID": "452904",
+			"ItemID": "3",
 			"ProductCode": "23",
 			"UnitOfMeasure": "EA",
 			"Quantity": "1",

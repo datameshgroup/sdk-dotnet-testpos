@@ -30,6 +30,8 @@ namespace SimplePOS
         private IFusionClient fusionClient;
         private int selectedTerminalIndex = 0;
         private bool? displayAdvanceSettings = null;
+        private RequestMessageFromHost receivedMessageFromHost = RequestMessageFromHost.None;
+        private Input currentInput;
 
         //File paths
         private readonly string settingsFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
@@ -39,6 +41,14 @@ namespace SimplePOS
         private readonly string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log.txt");
 
         public Task Initialization { get; private set; }
+
+        public enum RequestMessageFromHost
+        {
+            None,
+            Display,
+            Input,
+            Print
+        }
 
         public Settings Settings
         {
@@ -70,12 +80,12 @@ namespace SimplePOS
         public MainWindow()
         {
             DataContext = this;
-            InitializeComponent();            
+            InitializeComponent();
 
             LoadSettings();
             appState = LoadAppState();
 
-            UpdateTerminalSettings(true);
+            UpdateTerminalSettings();
 
             UpdateAdvanceSettingsVisibility();
 
@@ -86,14 +96,14 @@ namespace SimplePOS
 
         public async Task InitializeAsync()
         {
-            selectedTerminalIndex = appState.SelectedTerminalIndex;                
+            selectedTerminalIndex = Settings.SelectedTerminalIndex;
 
             await CreateFusionClient();
 
             if (appState?.PaymentInProgress == true)
             {
                 PaymentUIResponse r = await PerformErrorRecovery();
-                if(r != null)
+                if (r != null)
                 {
                     DisplayPaymentUIResponse(r);
                 }
@@ -119,8 +129,8 @@ namespace SimplePOS
             string kek = Settings.KEK;
 
             if ((selectedTerminalIndex == 1) && doesTerminal2SettingsExist())
-            {                
-                poiID = Settings.POIID2;                
+            {
+                poiID = Settings.POIID2;
             }
 
             fusionClient = new FusionClient(Settings.UseTestEnvironment)
@@ -141,7 +151,7 @@ namespace SimplePOS
 
         private bool doesTerminal2SettingsExist()
         {
-            return !String.IsNullOrEmpty(Settings.POIID2);   
+            return !String.IsNullOrEmpty(Settings.POIID2);
         }
 
         private void FusionClient_OnConnectError(object sender, EventArgs e)
@@ -184,7 +194,7 @@ namespace SimplePOS
             if (File.Exists(settingsFilePath))
             {
                 Settings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(settingsFilePath));
-            }    
+            }
             else
             {
                 Settings = new Settings()
@@ -201,8 +211,8 @@ namespace SimplePOS
                     ShiftNumber = null,
                     POSName = Environment.MachineName
                 };
-                NavigateToSettingsPage();                
-            }           
+                NavigateToSettingsPage();
+            }
         }
 
         private AppState LoadAppState()
@@ -212,7 +222,6 @@ namespace SimplePOS
 
         private void UpdateAppState(bool paymentInProgress, MessageHeader messageHeader = null)
         {
-            appState.SelectedTerminalIndex = selectedTerminalIndex;
             appState.PaymentInProgress = paymentInProgress;
             appState.MessageHeader = messageHeader ?? appState.MessageHeader;
 
@@ -221,7 +230,8 @@ namespace SimplePOS
 
         private void UpdateAdvanceSettingsVisibility()
         {
-            if((displayAdvanceSettings != null) && (displayAdvanceSettings == settings.DisplayAdvanceSettings)){
+            if ((displayAdvanceSettings != null) && (displayAdvanceSettings == settings.DisplayAdvanceSettings))
+            {
                 return;
             }
 
@@ -230,18 +240,20 @@ namespace SimplePOS
                 BtnLastTxnStatus.Visibility = Visibility.Collapsed;
 
                 TxtServiceID.Text = string.Empty;
-                WPanelServiceID.Visibility = Visibility.Visible;                
+                WPanelServiceID.Visibility = Visibility.Visible;
 
                 TxtMessageReferenceServiceID.Text = string.Empty;
                 SPanelTxnStatus.Visibility = Visibility.Visible;
 
                 TxtDMGTestCaseID.Text = string.Empty;
                 WPanelDMGTestCaseID.Visibility = Visibility.Visible;
-            } else {
+            }
+            else
+            {
                 BtnLastTxnStatus.Visibility = Visibility.Visible;
                 WPanelServiceID.Visibility = Visibility.Collapsed;
                 WPanelDMGTestCaseID.Visibility = Visibility.Collapsed;
-                SPanelTxnStatus.Visibility = Visibility.Collapsed;                
+                SPanelTxnStatus.Visibility = Visibility.Collapsed;
             }
 
             displayAdvanceSettings = settings.DisplayAdvanceSettings;
@@ -274,13 +286,19 @@ namespace SimplePOS
                     CboTerminalSelection.Items.Clear();
                     CboTerminalSelection.Items.Add(Settings.POIID);
                     CboTerminalSelection.Items.Add(Settings.POIID2);
-                    CboTerminalSelection.SelectedIndex = 0;
+                    if (selectedTerminalIndex > CboTerminalSelection.Items.Count)
+                    {
+                        selectedTerminalIndex = 0;
+                    }
                     SelectTerminalPanel.Visibility = Visibility.Visible;
                 }
                 else
                 {
+                    selectedTerminalIndex = 0;
                     SelectTerminalPanel.Visibility = Visibility.Collapsed;
                 }
+                SaveTerminalIndex();
+                CboTerminalSelection.SelectedIndex = selectedTerminalIndex;
             }
             GridSettings.Visibility = Visibility.Collapsed;
             GridMain.Visibility = Visibility.Visible;
@@ -291,28 +309,24 @@ namespace SimplePOS
         {
             UpdateTerminalSettings();
             UpdateAdvanceSettingsVisibility();
-            selectedTerminalIndex = 0;
             File.WriteAllText(settingsFilePath, System.Text.Json.JsonSerializer.Serialize<Settings>(Settings));
             await CreateFusionClient();
             NavigateToMainPage(true);
         }
 
-        private void UpdateTerminalSettings(bool updateAppMode = false)
-        {       
+        private void UpdateTerminalSettings()
+        {
             //If only the Terminal 2 Settings were set, place the settings to the first terminal instead.            
-            if(String.IsNullOrEmpty(Settings.POIID) &&               
+            if (String.IsNullOrEmpty(Settings.POIID) &&
                 doesTerminal2SettingsExist())
-            {                
-                Settings.POIID = (new StringBuilder(Settings.POIID2)).ToString();                
+            {
+                Settings.POIID = (new StringBuilder(Settings.POIID2)).ToString();
 
                 Settings.POIID2 = string.Empty;
 
                 selectedTerminalIndex = 0;
 
-                if (updateAppMode)
-                {
-                    appState.SelectedTerminalIndex = 0;
-                }
+                SaveTerminalIndex();
             }
         }
 
@@ -343,7 +357,7 @@ namespace SimplePOS
 
         private async void BtnPayment_Click(object sender, RoutedEventArgs e)
         {
-            await InitialiseTerminalSettings();
+            await CreateFusionClient();
             do
             {
                 // Perform payment
@@ -351,7 +365,7 @@ namespace SimplePOS
                 long tc64 = Environment.TickCount64;
                 PaymentUIResponse paymentUIResponse = await DoPayment();
                 tc64 = Environment.TickCount64 - tc64;
-                
+
                 AppendPaymentEvent(DateTime.Now, "Payment", tc64, paymentUIResponse?.PaymentResponse?.Response.Success);
 
                 // Display if not in test mode
@@ -360,13 +374,13 @@ namespace SimplePOS
                     DisplayPaymentUIResponse(paymentUIResponse);
                 }
             } while (settings.EnableVolumeTest);
-        }        
+        }
 
         private void BtnPaymentCryptoDotCom_Click(object sender, RoutedEventArgs e)
         {
             return;
         }
-        
+
         /// <summary>
         /// Displays a <see cref="PaymentUIResponse"/> and waits for user to acknowledge
         /// </summary>
@@ -377,7 +391,7 @@ namespace SimplePOS
                 ShowPaymentDialogFailed("ERROR", "UNABLE TO DISPLAY RESULT");
                 return;
             }
-            else if(!paymentUIResponse.Success)
+            else if (!paymentUIResponse.Success)
             {
                 ShowPaymentDialogFailed(paymentUIResponse.PaymentType, paymentUIResponse.ErrorTitle, paymentUIResponse.ErrorText, paymentUIResponse.PaymentResponse);
             }
@@ -455,14 +469,14 @@ namespace SimplePOS
                 {
                     paymentRequest.PaymentTransaction.SaleItem = mockData.SaleItems;
                     isMockDataLoaded = true;
-                }                
-            } 
-            catch(Exception ex)
+                }
+            }
+            catch (Exception ex)
             {
-           
+
                 File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - Unable to load Mock Data: {ex?.Message ?? ""}{Environment.NewLine}");
             }
-            
+
             SaleData saleData = new SaleData()
             {
                 SaleTransactionID = new TransactionIdentification()
@@ -477,7 +491,7 @@ namespace SimplePOS
 
             if (!isMockDataLoaded)
             {
-                SetDefaultSaleItems(paymentRequest, purchaseAmount);                
+                SetDefaultSaleItems(paymentRequest, purchaseAmount);
             }
 
             string paymentServiceID = null;
@@ -488,9 +502,9 @@ namespace SimplePOS
                 if (!string.IsNullOrEmpty(testCaseID))
                 {
                     paymentRequest.AddSaleItem(productCode: testCaseID, productLabel: testCaseID, itemAmount: 0);
-                }            
-                
-                if(!string.IsNullOrEmpty(TxtServiceID.Text))
+                }
+
+                if (!string.IsNullOrEmpty(TxtServiceID.Text))
                 {
                     paymentServiceID = TxtServiceID.Text;
                 }
@@ -536,38 +550,54 @@ namespace SimplePOS
             SaleToPOIMessage saleToPoiRequest = null;
             try
             {
-                if(string.IsNullOrEmpty(paymentServiceID)) {
+                receivedMessageFromHost = RequestMessageFromHost.None;
+
+                if (string.IsNullOrEmpty(paymentServiceID))
+                {
                     saleToPoiRequest = await fusionClient.SendAsync(paymentRequest);
-                } else {
+                }
+                else
+                {
                     saleToPoiRequest = await fusionClient.SendAsync(paymentRequest, paymentServiceID);
                 }
-                
+
                 UpdateAppState(true, saleToPoiRequest.MessageHeader);
                 bool waitingForResponse = true;
                 do
                 {
                     MessagePayload messagePayload = await fusionClient.RecvAsync(new System.Threading.CancellationTokenSource(transactionResponseTimeout).Token);
                     // Request to RecvAsync() will either result in a response from the host, or an exception (timeout, network error etc)
-                    switch (messagePayload)                    
+                    switch (messagePayload)
                     {
                         case PaymentResponse r:
                             UpdateAppState(false);
                             waitingForResponse = false;
-                            
+
                             paymentUIResponse.PaymentResponse = r;
                             if (!r.Response.Success)
                             {
                                 paymentUIResponse.ErrorTitle = r.Response?.ErrorCondition.ToString();
                                 paymentUIResponse.ErrorText = r.Response?.AdditionalResponse;
                             }
+
                             break;
 
                         case LoginResponse r:
                             // Response to auto login - could log this
                             break;
 
-                        case DisplayRequest r:
+                        case DisplayRequest r:                            
                             ShowPaymentDialog(paymentTypeName, "PAYMENT IN PROGRESS", r.GetCashierDisplayAsPlainText()?.ToUpper(System.Globalization.CultureInfo.InvariantCulture), "", LightBoxDialogType.Normal, false, true);
+                            break;
+
+                        case InputRequest r:
+                            receivedMessageFromHost = RequestMessageFromHost.Input;
+                            ShowPaymentInputDialog(paymentTypeName, "INPUT REQUIRED", r.GetCashierDisplayAsPlainText()?.ToUpper(System.Globalization.CultureInfo.InvariantCulture), r.InputData.InputCommand);
+                            break;
+
+                        case PrintRequest r:
+                            receivedMessageFromHost = RequestMessageFromHost.Print;
+                            ShowPaymentPrintDialog(paymentTypeName, "PRINT REQUIRED", r.GetReceiptAsPlainText()?.ToUpper(System.Globalization.CultureInfo.InvariantCulture));
                             break;
 
                         default:
@@ -578,7 +608,7 @@ namespace SimplePOS
                     {
                         File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Transaction timeout.{Environment.NewLine}");
                         waitingForResponse = false;
-                        timeoutTimer.Stop();                        
+                        timeoutTimer.Stop();
                         if (saleToPoiRequest == null)
                         {
                             paymentUIResponse.ErrorText = "TRANSACTION TIMEOUT";
@@ -623,14 +653,14 @@ namespace SimplePOS
             {
                 fusionClient.CustomURL = settings.CustomNexoURL;
                 fusionClient.URL = UnifyURL.Custom;
-            }            
+            }
 
             PairingDialog pairingDialog = new(fusionClient, settings.POSName);
             if (!string.IsNullOrEmpty(settings.SaleID))
             {
                 fusionClient.SaleID = settings.SaleID;
             }
-            if(!string.IsNullOrEmpty(settings.KEK))
+            if (!string.IsNullOrEmpty(settings.KEK))
             {
                 fusionClient.KEK = settings.KEK;
             }
@@ -647,8 +677,8 @@ namespace SimplePOS
                 }
                 else if (!pairingDialog.POIID.Equals(settings.POIID)) //don't pair the same terminal twice
                 {
-                    settings.POIID2 = pairingDialog.POIID; 
-                }                
+                    settings.POIID2 = pairingDialog.POIID;
+                }
                 UpdateTerminalDisplay(terminalIndex);
             }
         }
@@ -661,7 +691,7 @@ namespace SimplePOS
 
         private void UnpairFromTerminal(int terminalIndex)
         {
-            if(terminalIndex == 0)
+            if (terminalIndex == 0)
             {
                 Settings.POIID = string.Empty;
             }
@@ -674,19 +704,25 @@ namespace SimplePOS
 
         private void UpdateTerminalDisplay(int terminalIndex)
         {
-            if(terminalIndex == 0)
+            if (terminalIndex == 0)
             {
-                if(String.IsNullOrEmpty(Settings.POIID)) {
+                if (String.IsNullOrEmpty(Settings.POIID))
+                {
                     WPPOIID.Visibility = Visibility.Collapsed;
                     WPPairWithTerminal.Visibility = Visibility.Visible;
-                    WPUnpairFromTerminal.Visibility = Visibility.Collapsed;                    
-                } else {
+                    WPUnpairFromTerminal.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
                     WPPOIID.Visibility = Visibility.Visible;
                     WPPairWithTerminal.Visibility = Visibility.Collapsed;
-                    WPUnpairFromTerminal.Visibility = Visibility.Visible;                    
+                    WPUnpairFromTerminal.Visibility = Visibility.Visible;
                 }
-            } else {
-                if (String.IsNullOrEmpty(Settings.POIID2)){
+            }
+            else
+            {
+                if (String.IsNullOrEmpty(Settings.POIID2))
+                {
                     WPPOIID2.Visibility = Visibility.Collapsed;
                     WPPairWithTerminal2.Visibility = Visibility.Visible;
                     WPUnpairFromTerminal2.Visibility = Visibility.Collapsed;
@@ -695,22 +731,8 @@ namespace SimplePOS
                 {
                     WPPOIID2.Visibility = Visibility.Visible;
                     WPPairWithTerminal2.Visibility = Visibility.Collapsed;
-                    WPUnpairFromTerminal2.Visibility = Visibility.Visible;                    
+                    WPUnpairFromTerminal2.Visibility = Visibility.Visible;
                 }
-            }
-        }
-
-        private async Task InitialiseTerminalSettings()
-        {
-            int currentSelectTerminalIndex = 0;
-            if ((SelectTerminalPanel.Visibility == Visibility.Visible) && (CboTerminalSelection.SelectedIndex > -1))
-            {
-                currentSelectTerminalIndex = CboTerminalSelection.SelectedIndex;
-            }
-            if (currentSelectTerminalIndex != selectedTerminalIndex)
-            {
-                selectedTerminalIndex = currentSelectTerminalIndex;
-                await CreateFusionClient();
             }
         }
 
@@ -753,8 +775,8 @@ namespace SimplePOS
                itemAmount: quarterAmount,
                category: "food",
                subCategory: "sides"
-               );                       
-        }        
+               );
+        }
 
         private async void BtnReconciliation_Click(object sender, RoutedEventArgs e)
         {
@@ -763,7 +785,7 @@ namespace SimplePOS
 
             try
             {
-                await InitialiseTerminalSettings();
+                await CreateFusionClient();
                 var r = await fusionClient.SendRecvAsync<ReconciliationResponse>(new ReconciliationRequest(ReconciliationType.SaleReconciliation));
                 if (r.Response.Result != Result.Failure)
                 {
@@ -782,15 +804,15 @@ namespace SimplePOS
         }
 
         private void BtnTxnStatus_Click(object sender, RoutedEventArgs e)
-        {                  
-            MessageCategory messageCategory;            
+        {
+            MessageCategory messageCategory;
             switch (CboTxnStatusType.SelectedIndex)
             {
                 case 0:
                     messageCategory = appState?.MessageHeader?.MessageCategory ?? MessageCategory.Payment;
                     break;
                 default:
-                    messageCategory = MessageCategory.Reversal;                    
+                    messageCategory = MessageCategory.Reversal;
                     break;
             }
 
@@ -826,7 +848,7 @@ namespace SimplePOS
 
             try
             {
-                await InitialiseTerminalSettings();
+                await CreateFusionClient();
 
                 var r = await fusionClient.SendRecvAsync<TransactionStatusResponse>(transactionStatusRequest);
 
@@ -895,7 +917,7 @@ namespace SimplePOS
                 {
                     _ = await fusionClient.SendAsync(abortRequest);
                 }
-                catch(FusionException)
+                catch (FusionException)
                 {
                     // Throws FusionException when Internet is down
                 }
@@ -1087,6 +1109,27 @@ namespace SimplePOS
             return paymentUIResponse;
         }
 
+        private void SaveTerminalIndex()
+        {
+            if (Settings.SelectedTerminalIndex != selectedTerminalIndex)
+            {
+                Settings.SelectedTerminalIndex = selectedTerminalIndex;
+                File.WriteAllText(settingsFilePath, System.Text.Json.JsonSerializer.Serialize<Settings>(Settings));
+            }
+        }
+
+        private void UpdateButton(Button control, String text)
+        {
+            if (String.IsNullOrEmpty(text))
+            {
+                control.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                control.Content = text;
+                control.Visibility = Visibility.Visible;
+            }
+        }
 
         #region Message build helpers
         private LoginRequest BuildLoginRequest()
@@ -1145,7 +1188,7 @@ namespace SimplePOS
             PaymentResponse = paymentResponse;
             TxtReceipt.Text = paymentResponse.GetReceiptAsPlainText();
             String cashierReceipt = paymentResponse.GetReceiptAsPlainText(DocumentQualifier.CashierReceipt);
-            if(!String.IsNullOrEmpty(cashierReceipt))
+            if (!String.IsNullOrEmpty(cashierReceipt))
             {
                 TxtReceipt.Text += "\n----------------\n" + cashierReceipt;
             }
@@ -1159,6 +1202,8 @@ namespace SimplePOS
             // Show/hide views
             GridMain.Visibility = Visibility.Collapsed;
             PaymentDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
             PaymentCompleteGrid.Visibility = Visibility.Visible;
         }
 
@@ -1166,7 +1211,7 @@ namespace SimplePOS
         {
             PaymentResponse = null;
             TxtReceipt.Text = "";
-            
+
             // Set caption
             LblPaymentCompleteCaption.Content = caption;
             BorderPaymentCompleteTitle.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0x8A, 0x00));
@@ -1176,12 +1221,14 @@ namespace SimplePOS
             // Show/hide views
             GridMain.Visibility = Visibility.Collapsed;
             PaymentDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
             PaymentCompleteGrid.Visibility = Visibility.Visible;
         }
 
         private void ShowPaymentDialogFailed(string caption, string displayLine1 = null, string displayText = null, PaymentResponse paymentResponse = null)
         {
-            if(paymentResponse == null)
+            if (paymentResponse == null)
             {
                 ShowPaymentDialog(caption, "TRANSACTION DECLINED", displayLine1, displayText, LightBoxDialogType.Error, true, false);
                 return;
@@ -1204,8 +1251,69 @@ namespace SimplePOS
             // Show/hide views
             GridMain.Visibility = Visibility.Collapsed;
             PaymentDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
             PaymentCompleteGrid.Visibility = Visibility.Visible;
 
+        }
+
+        private void ShowPaymentInputDialog(string caption, string title, string displayText, InputCommand inputCommand)
+        {       
+            ((System.Windows.Media.Animation.Storyboard)FindResource("WaitStoryboard")).Stop();
+
+            currentInput = new Input()
+            {
+                InputCommand = inputCommand
+            };
+
+            // Set caption
+            LblPaymentInputDialogCaption.Content = caption;
+
+            // Set title            
+            SetLabel(LblPaymentInputDialogTitle, title);
+            BorderPaymentInputDialogTitle.Background = new SolidColorBrush(Colors.LightYellow);
+            LblPaymentInputDialogTitle.Foreground = new SolidColorBrush(Colors.DarkRed);
+
+            //SetText(TxtPaymentInputDialogText, displayText);
+            SetLabel(LblPaymentInputDialogLine1, displayText);
+
+            String btnText1 = null;
+            String btnText2 = null;
+
+            switch (inputCommand)
+            {
+                case InputCommand.GetAnyKey:
+                    btnText2 = "OK";
+                    break;
+                case InputCommand.GetConfirmation:
+                    btnText1 = "YES";
+                    btnText2 = "NO";
+                    break;
+            }
+
+            UpdateButton(BtnInputDialogOption1, btnText1);
+            UpdateButton(BtnInputDialogOption2, btnText2);
+
+            PaymentInputDialogGrid.Visibility = Visibility.Visible;
+        }
+
+        private void ShowPaymentPrintDialog(string caption, string title, string receipt)
+        {            
+            ((System.Windows.Media.Animation.Storyboard)FindResource("WaitStoryboard")).Stop();
+            
+            // Set caption
+            LblPaymentPrintDialogCaption.Content = caption;
+
+            // Set title            
+            SetLabel(LblPaymentPrintDialogTitle, title);
+            BorderPaymentPrintDialogTitle.Background = new SolidColorBrush(Colors.LightYellow);
+            LblPaymentPrintDialogTitle.Foreground = new SolidColorBrush(Colors.DarkRed);
+            
+            SetText(TxtReceiptPrint, receipt);
+           
+            UpdateButton(BtnPrintOption, "OK");
+
+            PaymentPrintDialogGrid.Visibility = Visibility.Visible;
         }
 
         private void ShowPaymentDialog(string caption, string title, string displayLine1, string displayText, LightBoxDialogType lightBoxDialogType, bool enableOk, bool enableCancel)
@@ -1262,6 +1370,37 @@ namespace SimplePOS
             PaymentDialogGrid.Visibility = Visibility.Collapsed;
         }
 
+        private async Task SendResponseToHost(MessagePayload messagePayload)
+        {
+            // Try cancel of payment if one is in progress, otherwise just close this dialog
+            if ((messagePayload != null) && appState.PaymentInProgress && (appState?.MessageHeader is not null))
+            {
+                try
+                {
+                    _ = await fusionClient.SendAsync(messagePayload, appState.MessageHeader.ServiceID);
+                }
+                catch (FusionException)
+                {
+                    // Throws FusionException when Internet is down
+                }
+                if (receivedMessageFromHost == RequestMessageFromHost.Input)
+                {
+                    PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
+                } 
+                else
+                {
+                    PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
+                }                
+            }
+            else
+            {
+                UpdateAppState(false);
+                NavigateToMainPage();
+            }
+
+            receivedMessageFromHost = RequestMessageFromHost.None;
+        }
+
         #endregion
 
         #region PaymentComplete
@@ -1271,9 +1410,10 @@ namespace SimplePOS
             GridMain.Visibility = Visibility.Visible;
             PaymentDialogGrid.Visibility = Visibility.Collapsed;
             PaymentCompleteGrid.Visibility = Visibility.Collapsed;
+            PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
             //WebBrowserReceipt.Visibility = Visibility.Visible;
         }
-
 
         #endregion
 
@@ -1284,7 +1424,7 @@ namespace SimplePOS
 
             try
             {
-                await InitialiseTerminalSettings();
+                await CreateFusionClient();
                 LogoutResponse r = await fusionClient.SendRecvAsync<LogoutResponse>(new LogoutRequest());
                 if (r.Response.Result != Result.Failure)
                 {
@@ -1308,7 +1448,7 @@ namespace SimplePOS
 
             try
             {
-                await InitialiseTerminalSettings();
+                await CreateFusionClient();
                 LoginResponse r = await fusionClient.SendRecvAsync<LoginResponse>(fusionClient.LoginRequest);
                 if (r.Response.Result != Result.Failure)
                 {
@@ -1324,25 +1464,91 @@ namespace SimplePOS
                 ShowPaymentDialogFailed(paymentTypeName, null, ex.Message);
             }
         }
-    }
 
-
-    /// <summary>
-    /// Wrapper for a payment response to be displayed on the UI
-    /// </summary>
-    public class PaymentUIResponse
-    {
-        public bool Success
+        private void CboTerminalSelection_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            get
+            if ((CboTerminalSelection.SelectedIndex >= 0) && (selectedTerminalIndex != CboTerminalSelection.SelectedIndex))
             {
-                return PaymentResponse?.Response.Success == true;
+                selectedTerminalIndex = CboTerminalSelection.SelectedIndex;
+                SaveTerminalIndex();
             }
         }
 
-        public PaymentResponse PaymentResponse { get; set; }
-        public string PaymentType { get; set; }
-        public string ErrorTitle { get; set; }
-        public string ErrorText { get; set; }
+        private async void BtnDialogOption1_Click(object sender, RoutedEventArgs e)
+        {
+            MessagePayload messagePayload = null;
+
+            if (receivedMessageFromHost == RequestMessageFromHost.Input)
+            {
+                if (currentInput.InputCommand == InputCommand.GetConfirmation)
+                {
+                    currentInput.ConfirmedFlag = true;
+                }
+                messagePayload = new InputResponse()
+                {
+                    InputResult = new InputResult()
+                    {
+                        Input = currentInput
+                    }
+                };
+            }
+            
+            await SendResponseToHost(messagePayload);
+
+        }
+
+        private async void BtnDialogOption2_Click(object sender, RoutedEventArgs e)
+        {
+            MessagePayload messagePayload = null;
+            if (receivedMessageFromHost == RequestMessageFromHost.Input)
+            {
+                if (currentInput.InputCommand == InputCommand.GetConfirmation)
+                {
+                    currentInput.ConfirmedFlag = false;
+                }
+                else if (currentInput.InputCommand == InputCommand.GetAnyKey)
+                {
+                    currentInput.TextInput = "OK";
+                }
+                messagePayload = new InputResponse()
+                {
+                    InputResult = new InputResult()
+                    {
+                        Input = currentInput
+                    }
+                };
+            }
+            else if(receivedMessageFromHost == RequestMessageFromHost.Print)
+            {
+                messagePayload = new PrintResponse()
+                {
+                    Response = new Response()
+                    {
+                        Result = Result.Success
+                    }
+                };
+            }
+            
+            await SendResponseToHost(messagePayload);            
+        }
+
+        /// <summary>
+        /// Wrapper for a payment response to be displayed on the UI
+        /// </summary>
+        public class PaymentUIResponse
+        {
+            public bool Success
+            {
+                get
+                {
+                    return PaymentResponse?.Response.Success == true;
+                }
+            }
+
+            public PaymentResponse PaymentResponse { get; set; }
+            public string PaymentType { get; set; }
+            public string ErrorTitle { get; set; }
+            public string ErrorText { get; set; }
+        }
     }
 }
