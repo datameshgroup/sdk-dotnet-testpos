@@ -23,7 +23,7 @@ namespace SimplePOS
     /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        private enum LightBoxDialogType { Normal, Success, Error }
+        private enum LightBoxDialogType { Normal, Success, Error }        
 
         private readonly AppState appState;
         private Settings settings;
@@ -32,6 +32,8 @@ namespace SimplePOS
         private bool? displayAdvanceSettings = null;
         private RequestMessageFromHost receivedMessageFromHost = RequestMessageFromHost.None;
         private Input currentInput;
+        private MessageCategory transactionCategory = MessageCategory.Payment;
+        private StoredValueTransactionType currentStoredValueTransactionType = StoredValueTransactionType.Activate;
 
         //File paths
         private readonly string settingsFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
@@ -77,6 +79,63 @@ namespace SimplePOS
             }
         }
 
+        private StoredValueResponse storedValueResponse;
+        public StoredValueResponse StoredValueResponse
+        {
+            get => storedValueResponse;
+            set
+            {
+                if (value != storedValueResponse)
+                {
+                    storedValueResponse = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        private StoredValueResult storedValueResult;
+        public StoredValueResult StoredValueResult
+        {
+            get => storedValueResult;
+            set
+            {
+                if (value != storedValueResult)
+                {
+                    storedValueResult = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+
+        private BalanceInquiryResponse balanceInquiryResponse;
+        public BalanceInquiryResponse BalanceInquiryResponse
+        {
+            get => balanceInquiryResponse;
+            set
+            {
+                if (value != balanceInquiryResponse)
+                {
+                    balanceInquiryResponse = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        private PaymentAccountStatus paymentAccountStatus;
+        public PaymentAccountStatus PaymentAccountStatus
+        {
+            get => paymentAccountStatus;
+            set
+            {
+                if (value != paymentAccountStatus)
+                {
+                    paymentAccountStatus = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
         public MainWindow()
         {
             DataContext = this;
@@ -84,6 +143,8 @@ namespace SimplePOS
 
             LoadSettings();
             appState = LoadAppState();
+
+            transactionCategory = appState?.MessageHeader?.MessageCategory ?? MessageCategory.Payment;
 
             UpdateTerminalSettings();
 
@@ -100,12 +161,12 @@ namespace SimplePOS
 
             await CreateFusionClient();
 
-            if (appState?.PaymentInProgress == true)
+            if (appState?.TransactionInProgress == true)
             {
-                PaymentUIResponse r = await PerformErrorRecovery();
+                TransactionUIResponse r = await PerformErrorRecovery();
                 if (r != null)
                 {
-                    DisplayPaymentUIResponse(r);
+                    DisplayTransactionUIResponse(r);
                 }
             }
         }
@@ -222,7 +283,7 @@ namespace SimplePOS
 
         private void UpdateAppState(bool paymentInProgress, MessageHeader messageHeader = null)
         {
-            appState.PaymentInProgress = paymentInProgress;
+            appState.TransactionInProgress = paymentInProgress;
             appState.MessageHeader = messageHeader ?? appState.MessageHeader;
 
             File.WriteAllText(appStateFilePath, JsonConvert.SerializeObject(appState));
@@ -363,15 +424,26 @@ namespace SimplePOS
                 // Perform payment
                 DateTime dateTime = DateTime.Now;
                 long tc64 = Environment.TickCount64;
-                PaymentUIResponse paymentUIResponse = await DoPayment();
+                TransactionUIResponse transactionUIResponse = await DoPayment();
                 tc64 = Environment.TickCount64 - tc64;
 
-                AppendPaymentEvent(DateTime.Now, "Payment", tc64, paymentUIResponse?.PaymentResponse?.Response.Success);
+                if (transactionCategory == MessageCategory.StoredValue)
+                {
+                    AppendPaymentEvent(DateTime.Now, "Stored Value", tc64, transactionUIResponse?.StoredValueResponse?.Response.Success);
+                }
+                else if (transactionCategory == MessageCategory.BalanceInquiry)
+                {
+                    AppendPaymentEvent(DateTime.Now, "Balance Inquiry", tc64, transactionUIResponse?.BalanceInquiryResponse?.Response.Success);
+                }
+                else
+                {
+                    AppendPaymentEvent(DateTime.Now, "Payment", tc64, transactionUIResponse?.PaymentResponse?.Response.Success);
+                }
 
                 // Display if not in test mode
                 if (!settings.EnableVolumeTest)
                 {
-                    DisplayPaymentUIResponse(paymentUIResponse);
+                    DisplayTransactionUIResponse(transactionUIResponse);
                 }
             } while (settings.EnableVolumeTest);
         }
@@ -382,22 +454,44 @@ namespace SimplePOS
         }
 
         /// <summary>
-        /// Displays a <see cref="PaymentUIResponse"/> and waits for user to acknowledge
+        /// Displays a <see cref="TransactionUIResponse"/> and waits for user to acknowledge
         /// </summary>
-        private void DisplayPaymentUIResponse(PaymentUIResponse paymentUIResponse)
+        private void DisplayTransactionUIResponse(TransactionUIResponse transactionUIResponse)
         {
-            if (paymentUIResponse == null)
+            if (transactionUIResponse == null)
             {
                 ShowPaymentDialogFailed("ERROR", "UNABLE TO DISPLAY RESULT");
                 return;
             }
-            else if (!paymentUIResponse.Success)
+            else if (!transactionUIResponse.Success)
             {
-                ShowPaymentDialogFailed(paymentUIResponse.PaymentType, paymentUIResponse.ErrorTitle, paymentUIResponse.ErrorText, paymentUIResponse.PaymentResponse);
+                if (transactionUIResponse.TransactionCategory == MessageCategory.StoredValue)
+                {
+                    ShowStoredValueDialogFailed(transactionUIResponse.TransactionType, transactionUIResponse.ErrorTitle, transactionUIResponse.ErrorText, transactionUIResponse.StoredValueResponse);
+                }
+                else if(transactionUIResponse.TransactionCategory == MessageCategory.BalanceInquiry)
+                {
+                    ShowBalanceInquiryDialogFailed(transactionUIResponse.TransactionType, transactionUIResponse.ErrorTitle, transactionUIResponse.ErrorText, transactionUIResponse.BalanceInquiryResponse);
+                }
+                else
+                {
+                    ShowPaymentDialogFailed(transactionUIResponse.TransactionType, transactionUIResponse.ErrorTitle, transactionUIResponse.ErrorText, transactionUIResponse.PaymentResponse);
+                }
             }
             else
             {
-                ShowPaymentDialogSuccess(paymentUIResponse.PaymentType, paymentUIResponse.PaymentResponse);
+                if (transactionUIResponse.TransactionCategory == MessageCategory.StoredValue)
+                {
+                    ShowStoredValueDialogSuccess(transactionUIResponse.TransactionType, transactionUIResponse.StoredValueResponse);
+                }
+                else if(transactionUIResponse.TransactionCategory == MessageCategory.BalanceInquiry)
+                {
+                    ShowBalanceInquiryDialogSuccess(transactionUIResponse.TransactionType, transactionUIResponse.BalanceInquiryResponse);
+                }
+                else
+                {
+                    ShowPaymentDialogSuccess(transactionUIResponse.TransactionType, transactionUIResponse.PaymentResponse);
+                }
             }
         }
 
@@ -405,132 +499,290 @@ namespace SimplePOS
         /// Perform a payment based on current app state and returns a response to display on the UI
         /// </summary>
         /// <returns></returns>
-        private async Task<PaymentUIResponse> DoPayment()
+        private async Task<TransactionUIResponse> DoPayment()
         {
             // Validate input
-            PaymentType paymentType;
-            string paymentTypeName;
+            PaymentType paymentType = PaymentType.Unknown;
+            StoredValueTransactionType storedValueTransactionType = StoredValueTransactionType.Activate;
+            string transactionTypeName;
+            transactionCategory = MessageCategory.Payment;
             switch (CboTxnType.SelectedIndex)
             {
                 case 0:
                     paymentType = PaymentType.Normal;
-                    paymentTypeName = "PURCHASE";
+                    transactionTypeName = "PURCHASE";
                     break;
                 case 1:
                     paymentType = PaymentType.Refund;
-                    paymentTypeName = "REFUND";
+                    transactionTypeName = "REFUND";
+                    break;
+                case 3:                    
+                    transactionCategory = MessageCategory.StoredValue;
+                    currentStoredValueTransactionType = storedValueTransactionType = StoredValueTransactionType.Activate;
+                    transactionTypeName = "STORED VALUE ACTIVATION";
+                    break;
+                case 4:
+                    transactionCategory = MessageCategory.StoredValue;
+                    currentStoredValueTransactionType = storedValueTransactionType = StoredValueTransactionType.Reverse;
+                    transactionTypeName = "STORED VALUE REVERSAL";
+                    break;
+                case 5:
+                    transactionCategory = MessageCategory.BalanceInquiry;                    
+                    transactionTypeName = "BALANCE INQUIRY";
                     break;
                 case 2:
                 default:
                     paymentType = PaymentType.CashAdvance;
-                    paymentTypeName = "CASH ADVANCE";
+                    transactionTypeName = "CASH ADVANCE";
                     break;
             }
 
-            if (!decimal.TryParse(TxtPurchaseAmount.Text, out decimal purchaseAmount))
+            string transactionServiceID = null;
+            MessagePayload transactionRequest = null;
+            string txtInProgress;
+
+            if (transactionCategory == MessageCategory.Payment)
             {
-                return new PaymentUIResponse() { PaymentType = paymentTypeName, ErrorTitle = "INVALID AMOUNT" };
-            }
-
-            // Tip amount can be null
-            decimal? tipAmount = decimal.TryParse(TxtTipAmount.Text, out decimal tmpTipAmount) ? tmpTipAmount : null;
-            // Cash amount can be null
-            decimal? cashoutAmount = decimal.TryParse(TxtCashoutAmount.Text, out decimal tmpCashoutAmount) ? tmpCashoutAmount : null;
-            bool requestCardToken = ChkRequestToken.IsChecked ?? false;
-            //string cardToken = string.IsNullOrWhiteSpace(TxtCardToken.Text) ? null : TxtCardToken.Text;
-
-            ShowPaymentDialog(paymentTypeName, "PAYMENT IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
-
-            // Create basic payment
-            // Construct payment request
-            PaymentRequest paymentRequest = new PaymentRequest()
-            {
-                PaymentData = new PaymentData()
+                txtInProgress = "PAYMENT IN PROGRESS";
+                if (!decimal.TryParse(TxtPurchaseAmount.Text, out decimal purchaseAmount))
                 {
-                    PaymentType = paymentType
-                },
-                PaymentTransaction = new PaymentTransaction()
+                    return new TransactionUIResponse() { TransactionCategory = transactionCategory, TransactionType = transactionTypeName, ErrorTitle = "INVALID AMOUNT" };
+                }
+
+                // Tip amount can be null
+                decimal? tipAmount = decimal.TryParse(TxtTipAmount.Text, out decimal tmpTipAmount) ? tmpTipAmount : null;
+                // Cash amount can be null
+                decimal? cashoutAmount = decimal.TryParse(TxtCashoutAmount.Text, out decimal tmpCashoutAmount) ? tmpCashoutAmount : null;
+                bool requestCardToken = ChkRequestToken.IsChecked ?? false;
+                //string cardToken = string.IsNullOrWhiteSpace(TxtCardToken.Text) ? null : TxtCardToken.Text;
+
+                ShowTransactionDialog(transactionTypeName, txtInProgress, "", "", LightBoxDialogType.Normal, false, true);
+
+                // Create basic payment
+                // Construct payment request
+                PaymentRequest paymentRequest = new PaymentRequest()
                 {
-                    AmountsReq = new AmountsReq()
+                    PaymentData = new PaymentData()
                     {
-                        Currency = CurrencySymbol.AUD,
-                        RequestedAmount = purchaseAmount,
-                        TipAmount = tipAmount
+                        PaymentType = paymentType
+                    },
+                    PaymentTransaction = new PaymentTransaction()
+                    {
+                        AmountsReq = new AmountsReq()
+                        {
+                            Currency = CurrencySymbol.AUD,
+                            RequestedAmount = purchaseAmount,
+                            TipAmount = tipAmount
+                        }
+                    }
+                };
+
+                bool isMockDataLoaded = false;
+                try
+                {
+                    MockData mockData = LoadMockData();
+
+                    if ((mockData.SaleItems != null) && (mockData.SaleItems.Count > 0))
+                    {
+                        paymentRequest.PaymentTransaction.SaleItem = mockData.SaleItems;
+                        isMockDataLoaded = true;
                     }
                 }
-            };
-
-            bool isMockDataLoaded = false;
-            try
-            {
-                MockData mockData = LoadMockData();
-
-                if ((mockData.SaleItems != null) && (mockData.SaleItems.Count > 0))
+                catch (Exception ex)
                 {
-                    paymentRequest.PaymentTransaction.SaleItem = mockData.SaleItems;
-                    isMockDataLoaded = true;
-                }
-            }
-            catch (Exception ex)
-            {
 
-                File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - Unable to load Mock Data: {ex?.Message ?? ""}{Environment.NewLine}");
-            }
-
-            SaleData saleData = new SaleData()
-            {
-                SaleTransactionID = new TransactionIdentification()
-                {
-                    TransactionID = Guid.NewGuid().ToString("N"),
-                    TimeStamp = DateTime.UtcNow
-                },
-            };
-            saleData.OperatorID = settings.OperatorID;
-            saleData.ShiftNumber = settings.ShiftNumber;
-            paymentRequest.SaleData = saleData;
-
-            if (!isMockDataLoaded)
-            {
-                SetDefaultSaleItems(paymentRequest, purchaseAmount);
-            }
-
-            string paymentServiceID = null;
-
-            if (displayAdvanceSettings == true)
-            {
-                string testCaseID = TxtDMGTestCaseID.Text;
-                if (!string.IsNullOrEmpty(testCaseID))
-                {
-                    paymentRequest.AddSaleItem(productCode: testCaseID, productLabel: testCaseID, itemAmount: 0);
+                    File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - Unable to load Mock Data: {ex?.Message ?? ""}{Environment.NewLine}");
                 }
 
-                if (!string.IsNullOrEmpty(TxtServiceID.Text))
+                SaleData saleData = new SaleData()
                 {
-                    paymentServiceID = TxtServiceID.Text;
+                    SaleTransactionID = new TransactionIdentification()
+                    {
+                        TransactionID = Guid.NewGuid().ToString("N"),
+                        TimeStamp = DateTime.UtcNow
+                    },
+                };
+                saleData.OperatorID = settings.OperatorID;
+                saleData.ShiftNumber = settings.ShiftNumber;
+                paymentRequest.SaleData = saleData;
+
+                if (!isMockDataLoaded)
+                {
+                    SetDefaultSaleItems(paymentRequest, purchaseAmount);
+                }                
+
+                if (displayAdvanceSettings == true)
+                {
+                    string testCaseID = TxtDMGTestCaseID.Text;
+                    if (!string.IsNullOrEmpty(testCaseID))
+                    {
+                        paymentRequest.AddSaleItem(productCode: testCaseID, productLabel: testCaseID, itemAmount: 0);
+                    }
+
+                    if (!string.IsNullOrEmpty(TxtServiceID.Text))
+                    {
+                        transactionServiceID = TxtServiceID.Text;
+                    }
                 }
+
+                // Add extra fields
+                paymentRequest.PaymentTransaction.AmountsReq.CashBackAmount = cashoutAmount;
+                paymentRequest.SaleData.TokenRequestedType = requestCardToken ? TokenRequestedType.Customer : null;
+                paymentRequest.PaymentTransaction.AmountsReq.TipAmount = tipAmount;
+
+                transactionRequest = paymentRequest;
+
+
+                //if(cardToken != null)
+                //{
+                //    paymentRequest.PaymentData.PaymentInstrumentData = new PaymentInstrumentData()
+                //    {
+                //        CardData = new CardData()
+                //        {
+                //            EntryMode = EntryMode.File,
+                //            PaymentToken = new PaymentToken()
+                //            {
+                //                TokenRequestedType = TokenRequestedType.Customer,
+                //                TokenValue = cardToken
+                //            }
+                //        }
+                //    };
+                //}
+            } 
+            else if(transactionCategory == MessageCategory.StoredValue)
+            {
+                if (!decimal.TryParse(TxtStoredValueAmount.Text, out decimal transactionAmount))
+                {
+                    return new TransactionUIResponse() { TransactionCategory = transactionCategory, TransactionType = transactionTypeName, ErrorTitle = "INVALID AMOUNT" };
+                } 
+                else if (TxtEanUPCBarcode.Text == null || TxtEanUPCBarcode.Text.Trim().Equals(string.Empty))
+                {
+                    return new TransactionUIResponse() { TransactionCategory = transactionCategory, TransactionType = transactionTypeName, ErrorTitle = "INVALID Ean/UPC/Barcode" };
+                }
+                else if (TxtPAN.Text == null || TxtPAN.Text.Trim().Equals(string.Empty))
+                {
+                    return new TransactionUIResponse() { TransactionCategory = transactionCategory, TransactionType = transactionTypeName, ErrorTitle = "INVALID PAN" };
+                }
+
+                txtInProgress = (storedValueTransactionType == StoredValueTransactionType.Activate) ? "ACTIVATION IN PROGRESS" : "REVERSAL IN PROGRESS";
+
+                ShowTransactionDialog(transactionTypeName, txtInProgress, "", "", LightBoxDialogType.Normal, false, true);
+
+                StoredValueRequest storedValueRequest = new StoredValueRequest();
+                StoredValueAccountID storedValueAccountID = new StoredValueAccountID()
+                {
+                    EntryMode = EntryMode.Manual,
+                    StoredValueAccountType = StoredValueAccountType.GiftCard,
+                    IdentificationType = IdentificationType.PAN,
+                    StoredValueID = TxtPAN.Text
+                };
+
+                storedValueRequest.AddStoredValueData(storedValueTransactionType, transactionAmount, null, storedValueAccountID, null, "001", TxtEanUPCBarcode.Text, null, "AUD");
+                
+                try
+                {
+                    MockData mockData = LoadMockData();
+
+                    if ((mockData.StoredValueData != null) && (mockData.StoredValueData.Count > 0))
+                    {
+                        storedValueRequest.StoredValueData = mockData.StoredValueData;
+                    }
+                }
+                catch (Exception ex)
+                {
+
+                    File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - Unable to load Mock Data: {ex?.Message ?? ""}{Environment.NewLine}");
+                }
+
+                SaleData saleData = new SaleData()
+                {
+                    SaleTransactionID = new TransactionIdentification()
+                    {
+                        TransactionID = Guid.NewGuid().ToString("N"),
+                        TimeStamp = DateTime.UtcNow
+                    },
+                };
+                saleData.OperatorID = settings.OperatorID;
+                saleData.ShiftNumber = settings.ShiftNumber;
+                storedValueRequest.SaleData = saleData;
+
+                if (displayAdvanceSettings == true)
+                {
+                    string testCaseID = TxtDMGTestCaseID.Text;
+                    if (!string.IsNullOrEmpty(testCaseID))
+                    {
+                        storedValueRequest.AddStoredValueData(StoredValueTransactionType.Activate, 0, null, null, null, testCaseID, testCaseID);                        
+                    }
+
+                    if (!string.IsNullOrEmpty(TxtServiceID.Text))
+                    {
+                        transactionServiceID = TxtServiceID.Text;
+                    }
+                }
+
+                transactionRequest = storedValueRequest;
+
+                //if(cardToken != null)
+                //{
+                //    paymentRequest.PaymentData.PaymentInstrumentData = new PaymentInstrumentData()
+                //    {
+                //        CardData = new CardData()
+                //        {
+                //            EntryMode = EntryMode.File,
+                //            PaymentToken = new PaymentToken()
+                //            {
+                //                TokenRequestedType = TokenRequestedType.Customer,
+                //                TokenValue = cardToken
+                //            }
+                //        }
+                //    };
+                //}
             }
+            else //if (transactionCategory == MessageCategory.BalanceInquiry)
+            {                
+                if (TxtBalInqBarcode.Text == null || TxtBalInqBarcode.Text.Trim().Equals(string.Empty))
+                {
+                    return new TransactionUIResponse() { TransactionCategory = transactionCategory, TransactionType = transactionTypeName, ErrorTitle = "INVALID Barcode" };
+                }                
 
-            // Add extra fields
-            paymentRequest.PaymentTransaction.AmountsReq.CashBackAmount = cashoutAmount;
-            paymentRequest.SaleData.TokenRequestedType = requestCardToken ? TokenRequestedType.Customer : null;
-            paymentRequest.PaymentTransaction.AmountsReq.TipAmount = tipAmount;
+                txtInProgress = "RETRIEVING BALANCE";
 
+                ShowTransactionDialog(transactionTypeName, txtInProgress, "", "", LightBoxDialogType.Normal, false, true);
 
-            //if(cardToken != null)
-            //{
-            //    paymentRequest.PaymentData.PaymentInstrumentData = new PaymentInstrumentData()
-            //    {
-            //        CardData = new CardData()
-            //        {
-            //            EntryMode = EntryMode.File,
-            //            PaymentToken = new PaymentToken()
-            //            {
-            //                TokenRequestedType = TokenRequestedType.Customer,
-            //                TokenValue = cardToken
-            //            }
-            //        }
-            //    };
-            //}
+                
+                StoredValueAccountID storedValueAccountID = new StoredValueAccountID()
+                {
+                    EntryMode = EntryMode.Manual,
+                    StoredValueAccountType = StoredValueAccountType.GiftCard,
+                    IdentificationType = IdentificationType.BarCode,
+                    StoredValueID = TxtBalInqBarcode.Text
+                };
+
+                BalanceInquiryRequest balanceInquiryRequest = new BalanceInquiryRequest(storedValueAccountID);
+
+                if (displayAdvanceSettings == true)
+                {
+                    string testCaseID = TxtDMGTestCaseID.Text;
+                    if (!string.IsNullOrEmpty(testCaseID))
+                    {
+                        LoyaltyAccountReq loyaltyAccountReq = new LoyaltyAccountReq()
+                        {
+                            LoyaltyAccountID = new LoyaltyAccountID()
+                            {
+                                LoyaltyID = testCaseID
+                            }
+                        };
+                        balanceInquiryRequest.LoyaltyAccountReq = loyaltyAccountReq;
+                    }
+
+                    if (!string.IsNullOrEmpty(TxtServiceID.Text))
+                    {
+                        transactionServiceID = TxtServiceID.Text;
+                    }
+                }
+
+                transactionRequest = balanceInquiryRequest;                
+            }
 
             bool checkTimer = false;
 
@@ -546,19 +798,20 @@ namespace SimplePOS
             }
 
             // Check environment 
-            PaymentUIResponse paymentUIResponse = new PaymentUIResponse();
+            TransactionUIResponse transactionUIResponse = new TransactionUIResponse();
             SaleToPOIMessage saleToPoiRequest = null;
             try
             {
                 receivedMessageFromHost = RequestMessageFromHost.None;
 
-                if (string.IsNullOrEmpty(paymentServiceID))
+                if (string.IsNullOrEmpty(transactionServiceID))
                 {
-                    saleToPoiRequest = await fusionClient.SendAsync(paymentRequest);
+                    saleToPoiRequest = await fusionClient.SendAsync(transactionRequest);
                 }
                 else
                 {
-                    saleToPoiRequest = await fusionClient.SendAsync(paymentRequest, paymentServiceID);
+                    MessageJSON(transactionRequest, transactionServiceID);
+                    saleToPoiRequest = await fusionClient.SendAsync(transactionRequest, transactionServiceID);
                 }
 
                 UpdateAppState(true, saleToPoiRequest.MessageHeader);
@@ -570,34 +823,66 @@ namespace SimplePOS
                     switch (messagePayload)
                     {
                         case PaymentResponse r:
-                            UpdateAppState(false);
-                            waitingForResponse = false;
-
-                            paymentUIResponse.PaymentResponse = r;
-                            if (!r.Response.Success)
+                            if (transactionCategory == MessageCategory.Payment)
                             {
-                                paymentUIResponse.ErrorTitle = r.Response?.ErrorCondition.ToString();
-                                paymentUIResponse.ErrorText = r.Response?.AdditionalResponse;
+                                UpdateAppState(false);
+                                waitingForResponse = false;
+
+                                transactionUIResponse.TransactionCategory = MessageCategory.Payment;
+                                transactionUIResponse.PaymentResponse = r;
+                                if (!r.Response.Success)
+                                {
+                                    transactionUIResponse.ErrorTitle = r.Response?.ErrorCondition.ToString();
+                                    transactionUIResponse.ErrorText = r.Response?.AdditionalResponse;
+                                }
                             }
-
                             break;
+                        case StoredValueResponse r:
+                            if (transactionCategory == MessageCategory.StoredValue)
+                            {
+                                UpdateAppState(false);
+                                waitingForResponse = false;
 
+                                transactionUIResponse.TransactionCategory = MessageCategory.StoredValue;
+                                transactionUIResponse.StoredValueResponse = r;
+                                if (!r.Response.Success)
+                                {
+                                    transactionUIResponse.ErrorTitle = r.Response?.ErrorCondition.ToString();
+                                    transactionUIResponse.ErrorText = r.Response?.AdditionalResponse;
+                                }
+                            }
+                            break;
+                        case BalanceInquiryResponse r:                        
+                            if (transactionCategory == MessageCategory.BalanceInquiry)
+                            {
+                                UpdateAppState(false);
+                                waitingForResponse = false;
+
+                                transactionUIResponse.TransactionCategory = MessageCategory.BalanceInquiry;
+                                transactionUIResponse.BalanceInquiryResponse = r;
+                                if (!r.Response.Success)
+                                {
+                                    transactionUIResponse.ErrorTitle = r.Response?.ErrorCondition.ToString();
+                                    transactionUIResponse.ErrorText = r.Response?.AdditionalResponse;
+                                }
+                            }
+                            break;
                         case LoginResponse r:
                             // Response to auto login - could log this
                             break;
 
                         case DisplayRequest r:                            
-                            ShowPaymentDialog(paymentTypeName, "PAYMENT IN PROGRESS", r.GetCashierDisplayAsPlainText()?.ToUpper(System.Globalization.CultureInfo.InvariantCulture), "", LightBoxDialogType.Normal, false, true);
+                            ShowTransactionDialog(transactionTypeName, txtInProgress, r.GetCashierDisplayAsPlainText()?.ToUpper(System.Globalization.CultureInfo.InvariantCulture), "", LightBoxDialogType.Normal, false, true);
                             break;
 
                         case InputRequest r:
                             receivedMessageFromHost = RequestMessageFromHost.Input;
-                            ShowPaymentInputDialog(paymentTypeName, "INPUT REQUIRED", r.GetCashierDisplayAsPlainText()?.ToUpper(System.Globalization.CultureInfo.InvariantCulture), r.InputData.InputCommand);
+                            ShowPaymentInputDialog(transactionTypeName, "INPUT REQUIRED", r.GetCashierDisplayAsPlainText()?.ToUpper(System.Globalization.CultureInfo.InvariantCulture), r.InputData.InputCommand);
                             break;
 
                         case PrintRequest r:
                             receivedMessageFromHost = RequestMessageFromHost.Print;
-                            ShowPaymentPrintDialog(paymentTypeName, "PRINT REQUIRED", r.GetReceiptAsPlainText()?.ToUpper(System.Globalization.CultureInfo.InvariantCulture));
+                            ShowPaymentPrintDialog(transactionTypeName, "PRINT REQUIRED", r.GetReceiptAsPlainText()?.ToUpper(System.Globalization.CultureInfo.InvariantCulture));
                             break;
 
                         default:
@@ -611,11 +896,11 @@ namespace SimplePOS
                         timeoutTimer.Stop();
                         if (saleToPoiRequest == null)
                         {
-                            paymentUIResponse.ErrorText = "TRANSACTION TIMEOUT";
+                            transactionUIResponse.ErrorText = "TRANSACTION TIMEOUT";
                         }
                         else
                         {
-                            paymentUIResponse = await PerformErrorRecovery();
+                            transactionUIResponse = await PerformErrorRecovery();
                         }
                     }
                 }
@@ -626,23 +911,51 @@ namespace SimplePOS
                 File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - FusionException: {fe?.Message ?? ""}. Error recovery required: {fe.ErrorRecoveryRequired}{Environment.NewLine}");
                 if (fe.ErrorRecoveryRequired && (saleToPoiRequest != null))
                 {
-                    paymentUIResponse = await PerformErrorRecovery();
+                    transactionUIResponse = await PerformErrorRecovery();
                 }
                 else
                 {
-                    paymentUIResponse.ErrorText = fe.Message;
+                    transactionUIResponse.ErrorText = fe.Message;
                 }
             }
             catch (Exception ex)
             {
                 File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Error - Exception: {ex?.Message ?? ""}{Environment.NewLine}");
-                paymentUIResponse.ErrorTitle = "UNKNOWN ERROR";
-                paymentUIResponse.ErrorText = ex.Message;
+                transactionUIResponse.ErrorTitle = "UNKNOWN ERROR";
+                transactionUIResponse.ErrorText = ex.Message;
             }
 
-            return paymentUIResponse;
+            return transactionUIResponse;
         }
 
+        private void MessageJSON(MessagePayload requestMessage, string serviceID) {            
+            string saleID = settings.SaleID;
+            string poiID = settings.POIID;
+            string kek = settings.KEK;            
+            JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore };
+
+            // Construct MessageHeader from RequestMessage
+            MessageHeader messageHeader = new MessageHeader()
+            {
+                ProtocolVersion = "3.1-dmg",
+                MessageClass = requestMessage.MessageClass,
+                MessageCategory = requestMessage.MessageCategory,
+                MessageType = requestMessage.MessageType,
+                ServiceID = serviceID,
+                POIID = poiID,
+                SaleID = saleID
+            };
+
+            string macBody = $"\"MessageHeader\":{JsonConvert.SerializeObject(messageHeader, Formatting.None, jsonSerializerSettings)},\"{messageHeader.GetMessageDescription()}\":{JsonConvert.SerializeObject(requestMessage, Formatting.None, jsonSerializerSettings)}";
+
+            File.AppendAllText(logPath, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")} - MAC Body: " + macBody);
+        }
+
+        /// <summary>
+        /// Pair POS with terminal
+        /// </summary>
+        /// <param name="terminalIndex"></param>
+        /// <returns></returns>
         private async Task PairTerminal(int terminalIndex)
         {
             FusionClient fusionClient = new FusionClient(useTestEnvironment: true)
@@ -781,7 +1094,7 @@ namespace SimplePOS
         private async void BtnReconciliation_Click(object sender, RoutedEventArgs e)
         {
             string paymentTypeName = "SETTLE";
-            ShowPaymentDialog(paymentTypeName, "SETTLEMENT IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
+            ShowTransactionDialog(paymentTypeName, "SETTLEMENT IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
 
             try
             {
@@ -790,11 +1103,11 @@ namespace SimplePOS
                 if (r.Response.Result != Result.Failure)
                 {
                     string receipt = r.GetReceiptAsPlainText();
-                    ShowPaymentDialog(paymentTypeName, "SETTLEMENT SUCCESS", "", "", LightBoxDialogType.Success, true, false);
+                    ShowTransactionDialog(paymentTypeName, "SETTLEMENT SUCCESS", "", "", LightBoxDialogType.Success, true, false);
                 }
                 else
                 {
-                    ShowPaymentDialog(paymentTypeName, "SETTLEMENT FAILED", r.Response.ErrorCondition.ToString(), r.Response.AdditionalResponse, LightBoxDialogType.Error, true, false);
+                    ShowTransactionDialog(paymentTypeName, "SETTLEMENT FAILED", r.Response.ErrorCondition.ToString(), r.Response.AdditionalResponse, LightBoxDialogType.Error, true, false);
                 }
             }
             catch (Exception ex)
@@ -855,19 +1168,33 @@ namespace SimplePOS
                 // If the response to our TransactionStatus request is "Success", we have a PaymentResponse to check
                 if (r.Response.Result == Result.Success)
                 {
-                    if (r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response.Result != Result.Failure)
+                    if (messageCategory == MessageCategory.StoredValue)
                     {
-                        ShowPaymentDialogSuccess(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse);
+                        if (r.RepeatedMessageResponse.RepeatedResponseMessageBody.StoredValueResponse.Response.Result != Result.Failure)
+                        {
+                            ShowStoredValueDialogSuccess(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.StoredValueResponse);
+                        }
+                        else
+                        {
+                            ShowStoredValueDialogFailed(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.StoredValueResponse.Response?.AdditionalResponse, null, r.RepeatedMessageResponse?.RepeatedResponseMessageBody?.StoredValueResponse);
+                        }
                     }
                     else
                     {
-                        ShowPaymentDialogFailed(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse, null, r.RepeatedMessageResponse?.RepeatedResponseMessageBody?.PaymentResponse);
+                        if (r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response.Result != Result.Failure)
+                        {
+                            ShowPaymentDialogSuccess(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse);
+                        }
+                        else
+                        {
+                            ShowPaymentDialogFailed(caption, r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse, null, r.RepeatedMessageResponse?.RepeatedResponseMessageBody?.PaymentResponse);
+                        }
                     }
                 }
                 // else if the transaction is still in progress, and we haven't reached out timeout
                 else if (r.Response.ErrorCondition == ErrorCondition.InProgress)
                 {
-                    ShowPaymentDialog(caption, "PAYMENT IN PROGRESS", null, "", LightBoxDialogType.Normal, true, false);
+                    ShowTransactionDialog(caption, "TRANSACTION IN PROGRESS", null, "", LightBoxDialogType.Normal, true, false);
                 }
                 // otherwise, fail
                 else
@@ -877,15 +1204,15 @@ namespace SimplePOS
             }
             catch (DataMeshGroup.Fusion.NetworkException ne)
             {
-                ShowPaymentDialog(caption, title, "WAITING FOR CONNECTION...", ne.Message, LightBoxDialogType.Normal, true, false);
+                ShowTransactionDialog(caption, title, "WAITING FOR CONNECTION...", ne.Message, LightBoxDialogType.Normal, true, false);
             }
             catch (DataMeshGroup.Fusion.TimeoutException)
             {
-                ShowPaymentDialog(caption, title, "TIMEOUT WAITING FOR HOST...", null, LightBoxDialogType.Normal, true, false);
+                ShowTransactionDialog(caption, title, "TIMEOUT WAITING FOR HOST...", null, LightBoxDialogType.Normal, true, false);
             }
             catch (Exception ex)
             {
-                ShowPaymentDialog(caption, title, "WAITING FOR CONNECTION...", ex.Message, LightBoxDialogType.Normal, true, false);
+                ShowTransactionDialog(caption, title, "WAITING FOR CONNECTION...", ex.Message, LightBoxDialogType.Normal, true, false);
             }
         }
 
@@ -899,7 +1226,7 @@ namespace SimplePOS
             settings.EnableVolumeTest = false;
 
             // Try cancel of payment if one is in progress, otherwise just close this dialog
-            if (appState.PaymentInProgress && appState?.MessageHeader is not null)
+            if (appState.TransactionInProgress && appState?.MessageHeader is not null)
             {
                 var abortRequest = new AbortRequest()
                 {
@@ -1014,27 +1341,26 @@ namespace SimplePOS
         //}
 
 
-        private async Task<PaymentUIResponse> PerformErrorRecovery()
+        private async Task<TransactionUIResponse> PerformErrorRecovery()
         {
             // Exit if we don't have anything to recover
-            if (appState is null || appState.PaymentInProgress == false || appState.MessageHeader is null)
+            if (appState is null || appState.TransactionInProgress == false || appState.MessageHeader is null)
             {
                 return null;
             }
 
-            // 
-            string caption = "RECOVERING PAYMENT";
-            string title = "PAYMENT RECOVERY IN PROGRESS";
-            ShowPaymentDialog(caption, title, null, null, LightBoxDialogType.Normal, false, true);
+            string caption = (transactionCategory == MessageCategory.Payment) ? "RECOVERING PAYMENT": "RECOVERING TRANSACTION";
+            string title = (transactionCategory == MessageCategory.Payment) ? "PAYMENT RECOVERY IN PROGRESS" : "TRANSACTION RECOVERY IN PROGRESS";
+            ShowTransactionDialog(caption, title, null, null, LightBoxDialogType.Normal, false, true);
 
             TimeSpan timeout = TimeSpan.FromSeconds(Settings.RecoveryProcessingTimeSecs);
             TimeSpan requestDelay = TimeSpan.FromSeconds(Settings.BetweenStatusCheckTimeSecs);
             Stopwatch timeoutTimer = new Stopwatch();
             timeoutTimer.Start();
 
-            PaymentUIResponse paymentUIResponse = new PaymentUIResponse();
+            TransactionUIResponse transactionUIResponse = new TransactionUIResponse();
             bool errorRecoveryInProgress = true;
-            while (errorRecoveryInProgress && appState.PaymentInProgress)
+            while (errorRecoveryInProgress && appState.TransactionInProgress)
             {
                 TransactionStatusRequest transactionStatusRequest = new TransactionStatusRequest()
                 {
@@ -1054,11 +1380,34 @@ namespace SimplePOS
                     // If the response to our TransactionStatus request is "Success", we have a PaymentResponse to check
                     if (r.Response.Result == Result.Success)
                     {
-                        paymentUIResponse.PaymentResponse = r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse;
-
-                        if (!r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response.Success)
+                        if (transactionCategory == MessageCategory.Payment)
                         {
-                            paymentUIResponse.ErrorText = r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse;
+                            transactionUIResponse.PaymentResponse = r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse;
+
+                            if (!r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response.Success)
+                            {
+                                transactionUIResponse.ErrorText = r.RepeatedMessageResponse.RepeatedResponseMessageBody.PaymentResponse.Response?.AdditionalResponse;
+                            }
+                        }
+                        else if(transactionCategory == MessageCategory.StoredValue) 
+                        {
+                            transactionUIResponse.StoredValueResponse = r.RepeatedMessageResponse.RepeatedResponseMessageBody.StoredValueResponse;
+
+                            if (!r.RepeatedMessageResponse.RepeatedResponseMessageBody.StoredValueResponse.Response.Success)
+                            {
+                                transactionUIResponse.ErrorText = r.RepeatedMessageResponse.RepeatedResponseMessageBody.StoredValueResponse.Response?.AdditionalResponse;
+                            }
+
+                        }
+                        else if (transactionCategory == MessageCategory.BalanceInquiry)
+                        {
+                            transactionUIResponse.BalanceInquiryResponse = r.RepeatedMessageResponse.RepeatedResponseMessageBody.BalanceInquiryResponse;
+
+                            if (!r.RepeatedMessageResponse.RepeatedResponseMessageBody.BalanceInquiryResponse.Response.Success)
+                            {
+                                transactionUIResponse.ErrorText = r.RepeatedMessageResponse.RepeatedResponseMessageBody.BalanceInquiryResponse.Response?.AdditionalResponse;
+                            }
+
                         }
 
                         errorRecoveryInProgress = false;
@@ -1066,35 +1415,55 @@ namespace SimplePOS
                     // else if the transaction is still in progress
                     else if (r.Response.ErrorCondition == ErrorCondition.InProgress)
                     {
+                        transactionUIResponse.TransactionCategory = transactionCategory;
                         //check if we haven't reached out timeout
                         if (timeoutTimer.Elapsed < timeout)
                         {
-                            ShowPaymentDialog(caption, title, "PAYMENT IN PROGRESS", "", LightBoxDialogType.Normal, false, true);
+                            ShowTransactionDialog(caption, title, (transactionCategory == MessageCategory.Payment) ? "PAYMENT IN PROGRESS": "TRANSACTION IN PROGRESS", "", LightBoxDialogType.Normal, false, true);
                         }
                         else
                         {
-                            paymentUIResponse.ErrorText = "PAYMENT RECOVERY TIMEOUT - PLEASE CHECK PINPAD";
+                            if (transactionCategory == MessageCategory.Payment)
+                            {
+                                transactionUIResponse.ErrorText = "PAYMENT RECOVERY TIMEOUT - PLEASE CHECK PINPAD";
+                            }
+                            else if(transactionCategory == MessageCategory.StoredValue)
+                            {                                
+                                switch (currentStoredValueTransactionType)
+                                {
+                                    case StoredValueTransactionType.Activate:
+                                        transactionUIResponse.ErrorText = "CARD ACTIVATION TIMEOUT";
+                                        break;
+                                    case StoredValueTransactionType.Reverse:
+                                        transactionUIResponse.ErrorText = "REVERSAL TIMEOUT";
+                                        break;
+                                    default:
+                                        transactionUIResponse.ErrorText = "TRANSACTION TIMEOUT";
+                                        break;
+                                }
+
+                            }
                             errorRecoveryInProgress = false;
                         }
                     }
                     // otherwise, fail
                     else
                     {
-                        paymentUIResponse.ErrorText = r.Response?.AdditionalResponse;
+                        transactionUIResponse.ErrorText = r.Response?.AdditionalResponse;
                         errorRecoveryInProgress = false;
                     }
                 }
                 catch (DataMeshGroup.Fusion.NetworkException ne)
                 {
-                    ShowPaymentDialog(caption, title, "WAITING FOR CONNECTION...", ne.Message, LightBoxDialogType.Normal, false, true);
+                    ShowTransactionDialog(caption, title, "WAITING FOR CONNECTION...", ne.Message, LightBoxDialogType.Normal, false, true);
                 }
                 catch (DataMeshGroup.Fusion.TimeoutException)
                 {
-                    ShowPaymentDialog(caption, title, "TIMEOUT WAITING FOR HOST...", null, LightBoxDialogType.Normal, false, true);
+                    ShowTransactionDialog(caption, title, "TIMEOUT WAITING FOR HOST...", null, LightBoxDialogType.Normal, false, true);
                 }
                 catch (Exception ex)
                 {
-                    ShowPaymentDialog(caption, title, "WAITING FOR CONNECTION...", ex.Message, LightBoxDialogType.Normal, false, true);
+                    ShowTransactionDialog(caption, title, "WAITING FOR CONNECTION...", ex.Message, LightBoxDialogType.Normal, false, true);
                 }
 
                 if (errorRecoveryInProgress)
@@ -1106,7 +1475,7 @@ namespace SimplePOS
             UpdateAppState(false);
 
             // return result
-            return paymentUIResponse;
+            return transactionUIResponse;
         }
 
         private void SaveTerminalIndex()
@@ -1204,7 +1573,90 @@ namespace SimplePOS
             PaymentDialogGrid.Visibility = Visibility.Collapsed;
             PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
             PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
+            StoredValueCompleteGrid.Visibility = Visibility.Collapsed;
+            BalanceInquiryCompleteGrid.Visibility = Visibility.Collapsed;
             PaymentCompleteGrid.Visibility = Visibility.Visible;
+        }
+
+        private void ShowStoredValueDialogSuccess(string caption, StoredValueResponse storedValueResponse)
+        {
+            StoredValueResponse = storedValueResponse;
+            if(storedValueResponse != null && (storedValueResponse.StoredValueResult != null))
+            {
+                StoredValueResult = storedValueResponse.StoredValueResult[0];
+            }
+            else
+            {
+                StoredValueResult = new StoredValueResult();
+            }
+
+            TxtStoredValueReceipt.Text = storedValueResponse.GetReceiptAsPlainText();
+            String cashierReceipt = storedValueResponse.GetReceiptAsPlainText(DocumentQualifier.CashierReceipt);
+            if (!String.IsNullOrEmpty(cashierReceipt))
+            {
+                TxtStoredValueReceipt.Text += "\n----------------\n" + cashierReceipt;
+            }
+
+            // Set caption
+            LblStoredValueCompleteCaption.Content = caption;
+            BorderStoredValueCompleteTitle.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0x8A, 0x00));
+            LblStoredValueCompleteTitle.Foreground = new SolidColorBrush(Colors.White);
+            switch(currentStoredValueTransactionType)
+            {
+                case StoredValueTransactionType.Activate:
+                    LblStoredValueCompleteTitle.Content = "CARD ACTIVATED";
+                    break;
+                case StoredValueTransactionType.Reverse:
+                    LblStoredValueCompleteTitle.Content = "REVERSAL SUCCESSFUL";
+                    break;
+                default:
+                    LblStoredValueCompleteTitle.Content = "TRANSACTION APPROVED";
+                    break;
+            }
+            
+            // Show/hide views
+            GridMain.Visibility = Visibility.Collapsed;
+            PaymentDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentCompleteGrid.Visibility = Visibility.Collapsed;
+            BalanceInquiryCompleteGrid.Visibility = Visibility.Collapsed;
+            StoredValueCompleteGrid.Visibility = Visibility.Visible;
+        }
+
+        private void ShowBalanceInquiryDialogSuccess(string caption, BalanceInquiryResponse balanceInquiryResponse)
+        {
+            BalanceInquiryResponse = balanceInquiryResponse;
+            if (balanceInquiryResponse != null && (balanceInquiryResponse.PaymentAccountStatus != null))
+            {
+                PaymentAccountStatus = balanceInquiryResponse.PaymentAccountStatus;
+            }
+            else
+            {
+                PaymentAccountStatus = new PaymentAccountStatus();
+            }
+
+            TxtBalanceInquiryReceipt.Text = balanceInquiryResponse.GetReceiptAsPlainText();
+            String cashierReceipt = balanceInquiryResponse.GetReceiptAsPlainText(DocumentQualifier.CashierReceipt);
+            if (!String.IsNullOrEmpty(cashierReceipt))
+            {
+                TxtBalanceInquiryReceipt.Text += "\n----------------\n" + cashierReceipt;
+            }
+
+            // Set caption
+            LblBalanceInquiryCompleteCaption.Content = caption;
+            BorderBalanceInquiryCompleteTitle.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0x8A, 0x00));
+            LblBalanceInquiryCompleteTitle.Foreground = new SolidColorBrush(Colors.White);
+            LblBalanceInquiryCompleteTitle.Content = "BALANCE INQUIRY SUCCESSFUL";            
+
+            // Show/hide views
+            GridMain.Visibility = Visibility.Collapsed;
+            PaymentDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentCompleteGrid.Visibility = Visibility.Collapsed;
+            StoredValueCompleteGrid.Visibility = Visibility.Collapsed;
+            BalanceInquiryCompleteGrid.Visibility = Visibility.Visible;
         }
 
         private void ShowPaymentDialogSuccess(string caption)
@@ -1223,6 +1675,8 @@ namespace SimplePOS
             PaymentDialogGrid.Visibility = Visibility.Collapsed;
             PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
             PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
+            StoredValueCompleteGrid.Visibility = Visibility.Collapsed;
+            BalanceInquiryCompleteGrid.Visibility = Visibility.Collapsed;
             PaymentCompleteGrid.Visibility = Visibility.Visible;
         }
 
@@ -1230,7 +1684,7 @@ namespace SimplePOS
         {
             if (paymentResponse == null)
             {
-                ShowPaymentDialog(caption, "TRANSACTION DECLINED", displayLine1, displayText, LightBoxDialogType.Error, true, false);
+                ShowTransactionDialog(caption, "PAYMENT DECLINED", displayLine1, displayText, LightBoxDialogType.Error, true, false);
                 return;
             }
 
@@ -1253,8 +1707,87 @@ namespace SimplePOS
             PaymentDialogGrid.Visibility = Visibility.Collapsed;
             PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
             PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
+            StoredValueCompleteGrid.Visibility = Visibility.Collapsed;
+            BalanceInquiryCompleteGrid.Visibility = Visibility.Collapsed;
             PaymentCompleteGrid.Visibility = Visibility.Visible;
+        }
 
+        private void ShowStoredValueDialogFailed(string caption, string displayLine1 = null, string displayText = null, StoredValueResponse storedValueResponse = null)
+        {
+            string dialogTitle;
+            switch (currentStoredValueTransactionType)
+            {
+                case StoredValueTransactionType.Activate:
+                    dialogTitle = "CARD ACTIVATION DECLINED";
+                    break;
+                case StoredValueTransactionType.Reverse:
+                    dialogTitle = "REVERSAL DECLINED";
+                    break;
+                default:
+                    dialogTitle = "TRANSACTION DECLINED";
+                    break;
+            }
+            if (storedValueResponse == null)
+            {
+                ShowTransactionDialog(caption, dialogTitle, displayLine1, displayText, LightBoxDialogType.Error, true, false);
+                return;
+            }
+
+            StoredValueResponse = storedValueResponse;
+            TxtStoredValueReceipt.Text = storedValueResponse.GetReceiptAsPlainText();
+            String cashierReceipt = storedValueResponse.GetReceiptAsPlainText(DocumentQualifier.CashierReceipt);
+            if (!String.IsNullOrEmpty(cashierReceipt))
+            {
+                TxtReceipt.Text += "\n----------------\n" + cashierReceipt;
+            }
+
+            // Set caption
+            LblStoredValueCompleteCaption.Content = caption;
+            BorderStoredValueCompleteTitle.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xA2, 0x00, 0x25));
+            LblStoredValueCompleteTitle.Foreground = new SolidColorBrush(Colors.White);
+            LblStoredValueCompleteTitle.Content = dialogTitle;
+
+            // Show/hide views
+            GridMain.Visibility = Visibility.Collapsed;
+            PaymentDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;            
+            PaymentCompleteGrid.Visibility = Visibility.Collapsed;
+            BalanceInquiryCompleteGrid.Visibility = Visibility.Collapsed;
+            StoredValueCompleteGrid.Visibility = Visibility.Visible;
+        }
+
+        private void ShowBalanceInquiryDialogFailed(string caption, string displayLine1 = null, string displayText = null, BalanceInquiryResponse balanceInquiryResponse = null)
+        {
+            string dialogTitle = "BALANCE INQUIRY FAILED";            
+            if (balanceInquiryResponse == null)
+            {
+                ShowTransactionDialog(caption, dialogTitle, displayLine1, displayText, LightBoxDialogType.Error, true, false);
+                return;
+            }
+
+            BalanceInquiryResponse = balanceInquiryResponse;
+            TxtBalanceInquiryReceipt.Text = balanceInquiryResponse.GetReceiptAsPlainText();
+            String cashierReceipt = balanceInquiryResponse.GetReceiptAsPlainText(DocumentQualifier.CashierReceipt);
+            if (!String.IsNullOrEmpty(cashierReceipt))
+            {
+                TxtReceipt.Text += "\n----------------\n" + cashierReceipt;
+            }
+
+            // Set caption
+            LblBalanceInquiryCompleteCaption.Content = caption;
+            BorderBalanceInquiryCompleteTitle.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xA2, 0x00, 0x25));
+            LblBalanceInquiryCompleteTitle.Foreground = new SolidColorBrush(Colors.White);
+            LblBalanceInquiryCompleteTitle.Content = dialogTitle;
+
+            // Show/hide views
+            GridMain.Visibility = Visibility.Collapsed;
+            PaymentDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
+            PaymentCompleteGrid.Visibility = Visibility.Collapsed;
+            StoredValueCompleteGrid.Visibility = Visibility.Collapsed;
+            BalanceInquiryCompleteGrid.Visibility = Visibility.Visible;
         }
 
         private void ShowPaymentInputDialog(string caption, string title, string displayText, InputCommand inputCommand)
@@ -1316,7 +1849,7 @@ namespace SimplePOS
             PaymentPrintDialogGrid.Visibility = Visibility.Visible;
         }
 
-        private void ShowPaymentDialog(string caption, string title, string displayLine1, string displayText, LightBoxDialogType lightBoxDialogType, bool enableOk, bool enableCancel)
+        private void ShowTransactionDialog(string caption, string title, string displayLine1, string displayText, LightBoxDialogType lightBoxDialogType, bool enableOk, bool enableCancel)
         {
             // Set caption
             LblPaymentDialogCaption.Content = caption;
@@ -1373,7 +1906,7 @@ namespace SimplePOS
         private async Task SendResponseToHost(MessagePayload messagePayload)
         {
             // Try cancel of payment if one is in progress, otherwise just close this dialog
-            if ((messagePayload != null) && appState.PaymentInProgress && (appState?.MessageHeader is not null))
+            if ((messagePayload != null) && appState.TransactionInProgress && (appState?.MessageHeader is not null))
             {
                 try
                 {
@@ -1405,13 +1938,15 @@ namespace SimplePOS
 
         #region PaymentComplete
 
-        private void BtnPaymentCompleteOK_Click(object sender, RoutedEventArgs e)
+        private void BtnTransactionCompleteOK_Click(object sender, RoutedEventArgs e)
         {
             GridMain.Visibility = Visibility.Visible;
             PaymentDialogGrid.Visibility = Visibility.Collapsed;
             PaymentCompleteGrid.Visibility = Visibility.Collapsed;
             PaymentInputDialogGrid.Visibility = Visibility.Collapsed;
             PaymentPrintDialogGrid.Visibility = Visibility.Collapsed;
+            StoredValueCompleteGrid.Visibility = Visibility.Collapsed;
+            BalanceInquiryCompleteGrid.Visibility = Visibility.Collapsed;
             //WebBrowserReceipt.Visibility = Visibility.Visible;
         }
 
@@ -1420,7 +1955,7 @@ namespace SimplePOS
         private async void BtnLogout_Click(object sender, RoutedEventArgs e)
         {
             string paymentTypeName = "LOGOUT";
-            ShowPaymentDialog(paymentTypeName, "LOGOUT IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
+            ShowTransactionDialog(paymentTypeName, "LOGOUT IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
 
             try
             {
@@ -1428,11 +1963,11 @@ namespace SimplePOS
                 LogoutResponse r = await fusionClient.SendRecvAsync<LogoutResponse>(new LogoutRequest());
                 if (r.Response.Result != Result.Failure)
                 {
-                    ShowPaymentDialog(paymentTypeName, "LOGOUT SUCCESS", "", "", LightBoxDialogType.Success, true, false);
+                    ShowTransactionDialog(paymentTypeName, "LOGOUT SUCCESS", "", "", LightBoxDialogType.Success, true, false);
                 }
                 else
                 {
-                    ShowPaymentDialog(paymentTypeName, "LOGOUT FAILED", r.Response.ErrorCondition.ToString(), r.Response.AdditionalResponse, LightBoxDialogType.Error, true, false);
+                    ShowTransactionDialog(paymentTypeName, "LOGOUT FAILED", r.Response.ErrorCondition.ToString(), r.Response.AdditionalResponse, LightBoxDialogType.Error, true, false);
                 }
             }
             catch (Exception ex)
@@ -1444,7 +1979,7 @@ namespace SimplePOS
         private async void BtnLogin_Click(object sender, RoutedEventArgs e)
         {
             string paymentTypeName = "LOGIN";
-            ShowPaymentDialog(paymentTypeName, "LOGIN IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
+            ShowTransactionDialog(paymentTypeName, "LOGIN IN PROGRESS", "", "", LightBoxDialogType.Normal, false, true);
 
             try
             {
@@ -1452,11 +1987,11 @@ namespace SimplePOS
                 LoginResponse r = await fusionClient.SendRecvAsync<LoginResponse>(fusionClient.LoginRequest);
                 if (r.Response.Result != Result.Failure)
                 {
-                    ShowPaymentDialog(paymentTypeName, "LOGIN SUCCESS", "", "", LightBoxDialogType.Success, true, false);
+                    ShowTransactionDialog(paymentTypeName, "LOGIN SUCCESS", "", "", LightBoxDialogType.Success, true, false);
                 }
                 else
                 {
-                    ShowPaymentDialog(paymentTypeName, "LOGIN FAILED", r.Response.ErrorCondition.ToString(), r.Response.AdditionalResponse, LightBoxDialogType.Error, true, false);
+                    ShowTransactionDialog(paymentTypeName, "LOGIN FAILED", r.Response.ErrorCondition.ToString(), r.Response.AdditionalResponse, LightBoxDialogType.Error, true, false);
                 }
             }
             catch (Exception ex)
@@ -1471,6 +2006,31 @@ namespace SimplePOS
             {
                 selectedTerminalIndex = CboTerminalSelection.SelectedIndex;
                 SaveTerminalIndex();
+            }
+        }
+
+        private void CboTxnType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            MessageCategory updatedTransactionCategory = (CboTxnType.SelectedIndex > 2)? ((CboTxnType.SelectedIndex == 5) ? MessageCategory.BalanceInquiry : MessageCategory.StoredValue) : MessageCategory.Payment;            
+            if (updatedTransactionCategory != transactionCategory)
+            {
+                if(updatedTransactionCategory == MessageCategory.StoredValue)
+                {
+                    WPanelPayment.Visibility = Visibility.Collapsed;
+                    WPanelBalanceInquiry.Visibility = Visibility.Collapsed;
+                    WPanelStoredValue.Visibility = Visibility.Visible;                    
+                } else if(updatedTransactionCategory == MessageCategory.Payment)
+                {
+                    WPanelStoredValue.Visibility = Visibility.Collapsed;
+                    WPanelBalanceInquiry.Visibility = Visibility.Collapsed;
+                    WPanelPayment.Visibility = Visibility.Visible;                    
+                } else if(updatedTransactionCategory == MessageCategory.BalanceInquiry)
+                {
+                    WPanelStoredValue.Visibility = Visibility.Collapsed;
+                    WPanelPayment.Visibility = Visibility.Collapsed;
+                    WPanelBalanceInquiry.Visibility = Visibility.Visible;
+                }
+                transactionCategory = updatedTransactionCategory;
             }
         }
 
@@ -1535,20 +2095,27 @@ namespace SimplePOS
         /// <summary>
         /// Wrapper for a payment response to be displayed on the UI
         /// </summary>
-        public class PaymentUIResponse
+        public class TransactionUIResponse
         {
             public bool Success
             {
                 get
                 {
-                    return PaymentResponse?.Response.Success == true;
+                    return (PaymentResponse?.Response.Success == true) || (StoredValueResponse?.Response.Success == true) || (BalanceInquiryResponse?.Response.Success == true);
                 }
             }
 
             public PaymentResponse PaymentResponse { get; set; }
-            public string PaymentType { get; set; }
+
+            public StoredValueResponse StoredValueResponse { get; set; }
+
+            public BalanceInquiryResponse BalanceInquiryResponse { get; set; }
+
+            public MessageCategory TransactionCategory { get; set; }
+
+            public string TransactionType { get; set; }
             public string ErrorTitle { get; set; }
             public string ErrorText { get; set; }
-        }
+        }        
     }
 }

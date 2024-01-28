@@ -6,11 +6,11 @@ namespace SimplePOS
     {
         public AppState()
         {
-            PaymentInProgress = false;
+            TransactionInProgress = false;
             MessageHeader = null;
         }
 
-        public bool PaymentInProgress { get; set; }
+        public bool TransactionInProgress { get; set; }
 
         public int SelectedTerminalIndex { get; set; }
 

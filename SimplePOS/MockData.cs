@@ -14,6 +14,9 @@ namespace SimplePOS
         [JsonIgnore]
         public List<SaleItem> SaleItems { get; set; }
 
+        [JsonIgnore]
+        public List<StoredValueData> StoredValueData { get; set; }
+
         public List<SaleItem> PaymentSaleItems {
             set 
             {
@@ -26,6 +29,20 @@ namespace SimplePOS
                     }
                 }
             }  
+        }
+
+        public List<StoredValueData> StoredValueDataItems{
+            set
+            {
+                StoredValueData = new List<StoredValueData>();
+                if (value != null)
+                {
+                    foreach (StoredValueData item in value)
+                    {
+                        StoredValueData.Add(item);
+                    }
+                }
+            }
         }
     }
 }

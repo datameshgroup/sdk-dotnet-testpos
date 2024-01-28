@@ -319,6 +319,14 @@ namespace SimplePOS
             }
         }
 
+        public string SimplePOSSoftwareVersion
+        {
+            get
+            {
+                return System.Reflection.Assembly.GetEntryAssembly().GetName().Version.ToString();
+            }
+        }
+
         #region INotifyPropertyChanged
         public event PropertyChangedEventHandler PropertyChanged;
 
