@@ -337,14 +337,6 @@
                             <TextBox x:Name="TxtStoredValueAmount" Text="5.0"/>
                             <Label Content="Account Type"/>
                             <TextBox x:Name="TxtAccountType" Text="Gift Card" IsReadOnly="True" Background="LightGray"/>
-                            <Label Content="PAN"/>
-                            <TextBox x:Name="TxtPAN" Text="0987654321"/>
-                        </WrapPanel>
-                        <WrapPanel x:Name="WPanelBalanceInquiry" Visibility="Collapsed">
-                            <Label Content="Account Type"/>
-                            <TextBox x:Name="TxtBalInqAccountType" Text="Gift Card" IsReadOnly="True" Background="LightGray"/>
-                            <Label Content="Barcode"/>
-                            <TextBox x:Name="TxtBalInqBarcode" Text="1234567890"/>
                         </WrapPanel>
                         <WrapPanel x:Name="WPanelServiceID">
                             <Label Content="Service ID"/>

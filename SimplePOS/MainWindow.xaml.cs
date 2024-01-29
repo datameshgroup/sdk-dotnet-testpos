@@ -658,11 +658,7 @@ namespace SimplePOS
                 else if (TxtEanUPCBarcode.Text == null || TxtEanUPCBarcode.Text.Trim().Equals(string.Empty))
                 {
                     return new TransactionUIResponse() { TransactionCategory = transactionCategory, TransactionType = transactionTypeName, ErrorTitle = "INVALID Ean/UPC/Barcode" };
-                }
-                else if (TxtPAN.Text == null || TxtPAN.Text.Trim().Equals(string.Empty))
-                {
-                    return new TransactionUIResponse() { TransactionCategory = transactionCategory, TransactionType = transactionTypeName, ErrorTitle = "INVALID PAN" };
-                }
+                }                
 
                 txtInProgress = (storedValueTransactionType == StoredValueTransactionType.Activate) ? "ACTIVATION IN PROGRESS" : "REVERSAL IN PROGRESS";
 
@@ -673,8 +669,8 @@ namespace SimplePOS
                 {
                     EntryMode = EntryMode.Manual,
                     StoredValueAccountType = StoredValueAccountType.GiftCard,
-                    IdentificationType = IdentificationType.PAN,
-                    StoredValueID = TxtPAN.Text
+                    IdentificationType = IdentificationType.BarCode,
+                    StoredValueID = TxtEanUPCBarcode.Text
                 };
 
                 storedValueRequest.AddStoredValueData(storedValueTransactionType, transactionAmount, null, storedValueAccountID, null, "001", TxtEanUPCBarcode.Text, null, "AUD");
@@ -739,26 +735,12 @@ namespace SimplePOS
                 //}
             }
             else //if (transactionCategory == MessageCategory.BalanceInquiry)
-            {                
-                if (TxtBalInqBarcode.Text == null || TxtBalInqBarcode.Text.Trim().Equals(string.Empty))
-                {
-                    return new TransactionUIResponse() { TransactionCategory = transactionCategory, TransactionType = transactionTypeName, ErrorTitle = "INVALID Barcode" };
-                }                
-
+            {                                
                 txtInProgress = "RETRIEVING BALANCE";
 
-                ShowTransactionDialog(transactionTypeName, txtInProgress, "", "", LightBoxDialogType.Normal, false, true);
+                ShowTransactionDialog(transactionTypeName, txtInProgress, "", "", LightBoxDialogType.Normal, false, true);               
 
-                
-                StoredValueAccountID storedValueAccountID = new StoredValueAccountID()
-                {
-                    EntryMode = EntryMode.Manual,
-                    StoredValueAccountType = StoredValueAccountType.GiftCard,
-                    IdentificationType = IdentificationType.BarCode,
-                    StoredValueID = TxtBalInqBarcode.Text
-                };
-
-                BalanceInquiryRequest balanceInquiryRequest = new BalanceInquiryRequest(storedValueAccountID);
+                BalanceInquiryRequest balanceInquiryRequest = new BalanceInquiryRequest();
 
                 if (displayAdvanceSettings == true)
                 {
@@ -2017,18 +1999,15 @@ namespace SimplePOS
                 if(updatedTransactionCategory == MessageCategory.StoredValue)
                 {
                     WPanelPayment.Visibility = Visibility.Collapsed;
-                    WPanelBalanceInquiry.Visibility = Visibility.Collapsed;
                     WPanelStoredValue.Visibility = Visibility.Visible;                    
                 } else if(updatedTransactionCategory == MessageCategory.Payment)
                 {
-                    WPanelStoredValue.Visibility = Visibility.Collapsed;
-                    WPanelBalanceInquiry.Visibility = Visibility.Collapsed;
+                    WPanelStoredValue.Visibility = Visibility.Collapsed;                    
                     WPanelPayment.Visibility = Visibility.Visible;                    
                 } else if(updatedTransactionCategory == MessageCategory.BalanceInquiry)
                 {
                     WPanelStoredValue.Visibility = Visibility.Collapsed;
-                    WPanelPayment.Visibility = Visibility.Collapsed;
-                    WPanelBalanceInquiry.Visibility = Visibility.Visible;
+                    WPanelPayment.Visibility = Visibility.Collapsed;                    
                 }
                 transactionCategory = updatedTransactionCategory;
             }
