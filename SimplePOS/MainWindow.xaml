@@ -314,9 +314,9 @@
                             <ComboBox x:Name="CboTxnType" SelectedIndex="0" SelectionChanged="CboTxnType_SelectionChanged">
                                 <ComboBoxItem Content="Purchase"/>
                                 <ComboBoxItem Content="Refund"/>
-                                <ComboBoxItem Content="CashOut"/>
-                                <ComboBoxItem Content="Stored Value - Activation"/>
-                                <ComboBoxItem Content="Stored Value - Reversal"/>
+                                <ComboBoxItem Content="Cash Out"/>
+                                <ComboBoxItem Content="Active Gift Card"/>
+                                <ComboBoxItem Content="Deactivate Gift Card"/>
                                 <ComboBoxItem Content="Balance Inquiry"/>
                             </ComboBox>
                         </WrapPanel>
@@ -332,11 +332,13 @@
                         </WrapPanel>
                         <WrapPanel x:Name="WPanelStoredValue" Visibility="Collapsed">
                             <Label Content=" EAN/UPC/Barcode"/>
-                            <TextBox x:Name="TxtEanUPCBarcode" Text="1234567890"/>
+                            <TextBox x:Name="TxtEanUPCBarcode" Text="79936689033"/>
                             <Label Content="Amount"/>
-                            <TextBox x:Name="TxtStoredValueAmount" Text="5.0"/>
+                            <TextBox x:Name="TxtStoredValueAmount" Text="50.0"/>
                             <Label Content="Account Type"/>
                             <TextBox x:Name="TxtAccountType" Text="Gift Card" IsReadOnly="True" Background="LightGray"/>
+                            <Label Content=" Stored Value ID"/>
+                            <TextBox x:Name="TxtStoredValueID" Text="799366890330001234567890123456"/>
                         </WrapPanel>
                         <WrapPanel x:Name="WPanelServiceID">
                             <Label Content="Service ID"/>
