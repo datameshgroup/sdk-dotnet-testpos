@@ -331,7 +331,7 @@
                             <CheckBox x:Name="ChkRequestToken"/>
                         </WrapPanel>
                         <WrapPanel x:Name="WPanelStoredValue" Visibility="Collapsed">
-                            <Label Content=" EAN/UPC/Barcode"/>
+                            <Label Content="EAN/UPC"/>
                             <TextBox x:Name="TxtEanUPCBarcode" Text="79936689033"/>
                             <Label Content="Amount"/>
                             <TextBox x:Name="TxtStoredValueAmount" Text="50.0"/>

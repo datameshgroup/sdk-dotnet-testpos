@@ -657,12 +657,8 @@ namespace SimplePOS
                 } 
                 else if (TxtEanUPCBarcode.Text == null || TxtEanUPCBarcode.Text.Trim().Equals(string.Empty))
                 {
-                    return new TransactionUIResponse(transactionCategory) { TransactionType = transactionTypeName, ErrorTitle = "INVALID Ean/UPC/Barcode" };
-                }
-                else if (TxtStoredValueID.Text == null || TxtStoredValueID.Text.Trim().Equals(string.Empty))
-                {
-                    return new TransactionUIResponse(transactionCategory) { TransactionType = transactionTypeName, ErrorTitle = "INVALID Stored Value ID" };
-                }
+                    return new TransactionUIResponse(transactionCategory) { TransactionType = transactionTypeName, ErrorTitle = "INVALID Ean/UPC" };
+                }                
 
                 txtInProgress = $"{transactionDesc} IN PROGRESS"; //to do:  update when more stored value account types are supported                
 
@@ -719,7 +715,7 @@ namespace SimplePOS
                     string testCaseID = TxtDMGTestCaseID.Text;
                     if (!string.IsNullOrEmpty(testCaseID))
                     {
-                        storedValueRequest.AddStoredValueData(StoredValueTransactionType.Activate, 0, null, null, null, testCaseID, testCaseID);                        
+                        storedValueRequest.AddStoredValueData(StoredValueTransactionType.Activate, 0, null, new StoredValueAccountID(), null, testCaseID, testCaseID);                        
                     }
 
                     if (!string.IsNullOrEmpty(TxtServiceID.Text))
