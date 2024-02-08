@@ -20,7 +20,7 @@
 					"Value": "35"
 				},
 				{
-					"Key": "FuelProductCodeFleetcard",
+					"Key": "FuelProductCodeFleetCard",
 					"Type": "String",
 					"Value": "21"
 				}
