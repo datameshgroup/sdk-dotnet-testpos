@@ -327,18 +327,20 @@
                             <TextBox x:Name="TxtTipAmount" Text=""/>
                             <Label Content="CashBack Amt"/>
                             <TextBox x:Name="TxtCashoutAmount" Text=""/>
+                            <Label Content="Allowed Payment Brands"/>
+                            <TextBox x:Name="TxtAllowedPaymentBrands" Text=""/>
                             <Label Content="Request Card Token"/>
                             <CheckBox x:Name="ChkRequestToken"/>
                         </WrapPanel>
                         <WrapPanel x:Name="WPanelStoredValue" Visibility="Collapsed">
                             <Label Content="EAN/UPC"/>
-                            <TextBox x:Name="TxtEanUPCBarcode" Text="79936689033"/>
+                            <TextBox x:Name="TxtEanUPCBarcode" Text="19674205794"/>
                             <Label Content="Amount"/>
-                            <TextBox x:Name="TxtStoredValueAmount" Text="50.0"/>
+                            <TextBox x:Name="TxtStoredValueAmount" Text="5.00"/>
                             <Label Content="Account Type"/>
                             <TextBox x:Name="TxtAccountType" Text="Gift Card" IsReadOnly="True" Background="LightGray"/>
                             <Label Content=" Stored Value ID"/>
-                            <TextBox x:Name="TxtStoredValueID" Text="799366890330001234567890123456"/>
+                            <TextBox x:Name="TxtStoredValueID" Text="196742057940006375097249200000"/>
                         </WrapPanel>
                         <WrapPanel x:Name="WPanelServiceID">
                             <Label Content="Service ID"/>
@@ -643,6 +645,14 @@
                                     <Label Content="AcquirerID"/>
                                     <TextBox Text="{Binding PaymentResponse.PaymentResult.PaymentAcquirerData.AcquirerID, Mode=OneWay}" TextWrapping="Wrap"/>
                                 </WrapPanel>                                
+                                <WrapPanel>
+                                    <Label Content="Currency"/>
+                                    <TextBox Text="{Binding PaymentResponse.PaymentResult.Currency, Mode=OneWay}"/>
+                                </WrapPanel>
+                                <WrapPanel>
+                                    <Label Content="Balance"/>
+                                    <TextBox Text="{Binding PaymentResponse.PaymentResult.CurrentBalance, Mode=OneWay}"/>
+                                </WrapPanel>
                                 <WrapPanel>
                                     <Label Content="Error Condition"/>
                                     <TextBox Text="{Binding PaymentResponse.Response.ErrorCondition, Mode=OneWay}"/>

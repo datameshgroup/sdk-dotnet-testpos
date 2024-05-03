@@ -548,6 +548,24 @@ namespace SimplePOS
                     return new TransactionUIResponse(transactionCategory) { TransactionType = transactionTypeName, ErrorTitle = "INVALID AMOUNT" };
                 }
 
+                List<string> allowedPaymentBrand = null;
+                if(TxtAllowedPaymentBrands.Text != null)
+                {
+                    string allowedPaymentBrandString = TxtAllowedPaymentBrands.Text.Replace("\"", string.Empty).Replace(@"\""", string.Empty).Trim();
+                    if (allowedPaymentBrandString.Length > 0)
+                    {
+                        try
+                        {
+                            allowedPaymentBrand = allowedPaymentBrandString.Split(',').Select(t => t.Trim()).ToList();
+                        }
+                        catch (Exception)
+                        {
+                            allowedPaymentBrand = null;
+                            return new TransactionUIResponse(transactionCategory) { TransactionType = transactionTypeName, ErrorTitle = "INVALID ALLOWED PAYMENT BRAND" };
+                        }
+                    }
+                }
+
                 // Tip amount can be null
                 decimal? tipAmount = decimal.TryParse(TxtTipAmount.Text, out decimal tmpTipAmount) ? tmpTipAmount : null;
                 // Cash amount can be null
@@ -572,6 +590,10 @@ namespace SimplePOS
                             Currency = CurrencySymbol.AUD,
                             RequestedAmount = purchaseAmount,
                             TipAmount = tipAmount
+                        },
+                        TransactionConditions = new TransactionConditions()
+                        {
+                            AllowedPaymentBrand = allowedPaymentBrand
                         }
                     }
                 };
