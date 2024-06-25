@@ -536,7 +536,7 @@
                     </Border>
 
                     <StackPanel x:Name="ReceiptPaymentPrint" Grid.Row="2" Grid.RowSpan="1" VerticalAlignment="Center">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Column="1" Margin="0,2,0,2" Background="#FAFAFA">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Visible" Grid.Column="1" Margin="0,2,0,2" Background="#FAFAFA">
                             <Border BorderThickness="1" BorderBrush="DarkGray">
                                 <TextBlock x:Name="TxtReceiptPrint" Padding="4" Style="{StaticResource ReceiptText}"/>
                             </Border>
@@ -664,7 +664,7 @@
                             </StackPanel>
                         </ScrollViewer>
 
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Column="1" Margin="0,4,0,4" Background="#FAFAFA">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Visible" Grid.Column="1" Margin="0,4,0,4" Background="#FAFAFA">
                             <Border BorderThickness="1" BorderBrush="DarkGray">
                                 <TextBlock x:Name="TxtReceipt" Padding="4" Style="{StaticResource ReceiptText}"/>
                             </Border>
